@@ -1,0 +1,10 @@
+bin/
+img/source/
+target/
+project/target/
+project/project/
+.settings/
+.cache-main
+.classpath
+.project
+
