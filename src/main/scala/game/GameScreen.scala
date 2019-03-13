@@ -4,7 +4,7 @@ import scalafx.Includes._
 import scalafx.scene.Scene
 import scalafx.scene.paint.Color._
 import scalafx.scene.image.Image
-import scalafx.scene.canvas.Canvas
+import scalafx.scene.canvas.{Canvas, GraphicsContext}
 import scalafx.scene.input.KeyCode
 import scalafx.animation.{Animation, Timeline, KeyFrame}
 import scalafx.util.Duration
@@ -20,7 +20,7 @@ import scalafx.geometry.Pos
 import scalafx.scene.input.MouseEvent
 import scalafx.scene.input.MouseButton
 import scalafx.geometry.Point2D
-import scalafx.scene.text.Text
+import scalafx.scene.text.{Text, TextAlignment}
 import scalafx.beans.value.ObservableValue
 
 import scala.collection.mutable.HashMap
@@ -41,10 +41,11 @@ class GameScreen extends BaseScreen {
   var camOffset = Coordinate(0, 0)
   var centerPosition = Coordinate(0, 0)
   var mousePosition = Coordinate(0, 0)
+  var damageCounters = Array[DamageCounter]()
   
   fill = Black
       
-  val game = new Game
+  val game = new Game(onDamageCaused)
   
   val characterImageMap = new HashMap[String, Image]()
   characterImageMap += (Warrior.toString -> new Image("file:img/warrior_m.png"))
@@ -94,16 +95,16 @@ class GameScreen extends BaseScreen {
   content = layout
  
   //add some test data
-  val testChar = new Character(10, Warrior)
+  val testChar = new Character(100, Warrior)
   val testPlayer = new Player("tester")
   testPlayer.characters += testChar
-  val testChar2 = new Character(10, Monk)
+  val testChar2 = new Character(100, Monk)
   testChar2.moveTo(Coordinate(6, 3))
   testPlayer.characters += testChar2
   game.playerList += testPlayer
   
   val testPlayer2 = new Player("other")
-  val otherChar1 = new Character(12, Monk)
+  val otherChar1 = new Character(120, Monk)
   otherChar1.moveTo(Coordinate(3, 6))
   testPlayer2.characters += otherChar1
   game.playerList += testPlayer2
@@ -116,6 +117,7 @@ class GameScreen extends BaseScreen {
         clearCanvas(characterCanvas)
         drawSelectionOutline(characterCanvas)
         drawGameCharacters(characterCanvas)
+        drawDamageCounters(characterCanvas, TickDelay)
       })
     )
     cycleCount = Timeline.Indefinite
@@ -283,4 +285,49 @@ class GameScreen extends BaseScreen {
       canvas.translateY = camOffset.y + centerPosition.y
     })
   }
+
+  def onDamageCaused(damage: Int, position: Coordinate) = {
+    this.damageCounters = this.damageCounters :+ new DamageCounter(damage, position)
+  }
+  def drawDamageCounters(canvas: Canvas, delay: Int) = {
+    this.damageCounters.foreach(counter => {
+      counter.offset += delay / 20.0
+      counter.ttl -= delay
+    })
+    this.damageCounters = this.damageCounters.filter(_.ttl > 0)
+
+    val context = canvas.graphicsContext2D
+    context.save()
+    context.fill = Red
+    context.stroke = Black
+    context.lineWidth = 2
+
+    this.damageCounters.foreach(counter => {
+      val string = counter.damage.toString
+      val bounds = getContextStringBounds(context, string)
+      val textWidth = bounds.getWidth
+      val textHeight = bounds.getHeight
+
+      context.strokeText(string,
+          counter.position.x * TileSize + (TileSize - textWidth) / 2, counter.position.y * TileSize + (TileSize + textHeight) / 2 - counter.offset, TileSize
+          )
+      context.fillText(string,
+          counter.position.x * TileSize + (TileSize - textWidth) / 2, counter.position.y * TileSize + (TileSize + textHeight) / 2 - counter.offset, TileSize
+          )
+    })
+    context.restore()
+  }
+
+  def getContextStringBounds(context: GraphicsContext, text: String) = {
+    val metricText = new Text
+    metricText.text = text
+    metricText.font = context.font
+    metricText.strokeWidth = context.lineWidth
+    metricText.layoutBounds.get
+  }
+}
+
+class DamageCounter(val damage: Int, val position: Coordinate) {
+  var offset = 0.0
+  var ttl = 1000
 }

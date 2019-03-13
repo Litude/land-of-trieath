@@ -13,23 +13,25 @@ object Direction extends Enumeration {
 class Character(var maxHitPoints: Int = 100, val charType: CharacterType) {
   val MaxWalkOffset = 14
   
+  val attackPower = 22
   var hitpoints = maxHitPoints
   var walkingOffset = 0
-  var maxMovementPoints = 10
+  var maxMovementPoints = 100
   var movementPoints = maxMovementPoints
   var position = Coordinate(0, 0)
   def frame = walkingOffset / 5
   var direction = Direction.South
   var walkingPath: Option[ArrayBuffer[Coordinate]] = None
+  var attackTarget: Option[Character] = None
   
   def setPath(newPath: Option[ArrayBuffer[Coordinate]]): Unit = {
     walkingPath = newPath
-    walkingOffset = 0
   }
   
   def clearPath(): Unit = {
     walkingPath = None
     walkingOffset = 0
+    attackTarget = None
   }
   
   def moveTo(newPosition: Coordinate) {
@@ -42,18 +44,20 @@ class Character(var maxHitPoints: Int = 100, val charType: CharacterType) {
   
   def walkAlongPath(): Boolean = {
     walkingPath.map(path => {
+      //update the path once we have walked across one tile
       if (walkingOffset == 0) {
+        //stop walking if at end of path or out of movement points
         if (path.length == 0 || movementPoints == 0) {
           walkingPath = None
           walkingOffset = 0
           true
         } else {
-        walkingOffset = MaxWalkOffset
-        direction = position.directionTo(path.head)
-        position = path.head
-        path.remove(0)
-        walkingOffset -= 1
-        movementPoints -= 1
+          walkingOffset = MaxWalkOffset
+          direction = position.directionTo(path.head)
+          position = path.head
+          path.remove(0)
+          walkingOffset -= 1
+          movementPoints -= 1
           false
         }
       } else {
@@ -64,4 +68,12 @@ class Character(var maxHitPoints: Int = 100, val charType: CharacterType) {
   }
   
   def isMoving: Boolean = walkingPath.isDefined
+  
+  //attacks target character, returns the amount of damage caused
+  def attackCharacter(target: Character): Int = {
+    val originalHitpoints = target.hitpoints
+    target.hitpoints = Math.max(target.hitpoints - attackPower, 0)
+    this.movementPoints = 0
+    originalHitpoints - target.hitpoints
+  }
 }
