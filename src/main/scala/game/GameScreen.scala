@@ -1,27 +1,15 @@
 package game
 
 import scalafx.Includes._
-import scalafx.scene.Scene
+import scalafx.animation._
 import scalafx.scene.paint.Color._
 import scalafx.scene.image.Image
-import scalafx.scene.canvas.{Canvas, GraphicsContext}
-import scalafx.scene.input.KeyCode
-import scalafx.animation.{Animation, Timeline, KeyFrame}
+import scalafx.scene.canvas._
 import scalafx.util.Duration
-import scalafx.scene.shape.Rectangle
-import scalafx.scene.layout.HBox
-import scalafx.scene.paint.Paint
-import scalafx.scene.layout.Priority
-import scalafx.scene.layout.Pane
-import scalafx.scene.layout.VBox
-import scalafx.scene.control.Button
-import scalafx.geometry.HPos
-import scalafx.geometry.Pos
-import scalafx.scene.input.MouseEvent
-import scalafx.scene.input.MouseButton
+import scalafx.scene.layout._
+import scalafx.scene.input._
 import scalafx.geometry.Point2D
-import scalafx.scene.text.{Text, TextAlignment}
-import scalafx.beans.value.ObservableValue
+import scalafx.scene.text.Text
 
 import scala.collection.mutable.HashMap
 
@@ -59,37 +47,9 @@ class GameScreen extends BaseScreen {
   mapPane.children = Array(mapCanvas, characterCanvas)
   mapPane.hgrow = Priority.Always
   
-  val menu = new VBox
-  val menuSpacer = Rectangle(MenuWidth, 1, Black)
-  val buttonEndTurn = new Button("End Turn")
-  buttonEndTurn.onAction = () => endTurn()
+  val menu = new GameSideBar(MenuWidth, endTurn)
+  menu.updateCurrentPlayerText(game.currentPlayer)
   
-  val textCurrentPlayer = new Text
-  textCurrentPlayer.text = f"Current Turn: Player ${game.currentPlayer + 1}"
-  textCurrentPlayer.fill = White
-  
-  val textCharacterHP = new Text
-  textCharacterHP.text = ""
-  textCharacterHP.fill = White
-  textCharacterHP.visible = false
-  
-  val textCharacterMovement = new Text
-  textCharacterMovement.text = ""
-  textCharacterMovement.fill = White
-  textCharacterMovement.visible = false
-  
-  val textCharacterClass = new Text
-  textCharacterClass.text = ""
-  textCharacterClass.fill = White
-  textCharacterClass.visible = false
-  
-  val textCharacterOwner = new Text
-  textCharacterOwner.text = ""
-  textCharacterOwner.fill = White
-  textCharacterOwner.visible = false
-  
-  menu.children = Array(menuSpacer, buttonEndTurn, textCurrentPlayer, textCharacterHP, textCharacterMovement, textCharacterClass, textCharacterOwner)
-  menu.hgrow = Priority.Never
   val layout = new HBox
   layout.children = Array(mapPane, menu)
   content = layout
@@ -113,7 +73,7 @@ class GameScreen extends BaseScreen {
     keyFrames = Seq(
       KeyFrame(Duration(TickDelay), onFinished = () => {
         game.updateGameState()
-        updateCharacterUI()
+        menu.updateCharacterUI(selectedCharacter, selectedCharacter.map(game.getCharacterPlayer))
         clearCanvas(characterCanvas)
         drawSelectionOutline(characterCanvas)
         drawGameCharacters(characterCanvas)
@@ -136,7 +96,7 @@ class GameScreen extends BaseScreen {
         }
         case MouseButton.Secondary => {
           selectedCharacter.foreach(character => {
-            if (game.playerList(game.currentPlayer).characters.exists(that => that == character)) {
+            if (game.playerList(game.currentPlayer).characters.exists(_ == character)) {
               game.moveCharacter(character, tileCoords)
             }
             
@@ -178,29 +138,16 @@ class GameScreen extends BaseScreen {
     clipCameraToBounds()
     translateScene()
   }
-  
-  def updateCharacterUI(): Unit = {
-    selectedCharacter match {
-      case Some(character) => {
-        textCharacterHP.text = f"Hitpoints: ${character.hitpoints}/${character.maxHitPoints}"
-        textCharacterHP.visible = true
-        textCharacterMovement.text = f"Movement: ${character.movementPoints}/${character.maxMovementPoints}"
-        textCharacterMovement.visible = true
-        textCharacterClass.text = f"Class: ${character.charType}"
-        textCharacterClass.visible = true
-        textCharacterOwner.text = f"Owner: Player ${game.getCharacterPlayer(character) + 1}"
-        textCharacterOwner.visible = true
-      }
-      case None => {
-        textCharacterHP.visible = false
-        textCharacterMovement.visible = false
-        textCharacterClass.visible = false
-        textCharacterOwner.visible = false
-      }
-    }
-  }
-  
+
   def drawGameMap(canvas: Canvas): Unit = {
+
+    def drawTileOnCanvas(context: GraphicsContext, image: Image, index: Int, x: Int, y: Int): Unit = {
+      context.drawImage(image,
+          (index % TileMapWidth) * TileSize, (index / TileMapWidth) * TileSize, TileSize, TileSize,
+          x * TileSize, y * TileSize, TileSize, TileSize
+          )
+    }
+
     val context = canvas.graphicsContext2D
     val groundTiles = new Image("file:img/tiles_ground.png")
     val obstacleTiles = new Image("file:img/tiles_obstacles.png")
@@ -209,23 +156,16 @@ class GameScreen extends BaseScreen {
       x <- 0 until game.map.height
     } {
       val tile = game.map(x, y)
-      context.drawImage(groundTiles,
-          (tile.groundType % TileMapWidth) * TileSize, (tile.groundType / TileMapWidth) * TileSize, TileSize, TileSize,
-          x * TileSize, y * TileSize, TileSize, TileSize
-          )
-      tile.obstacleType.foreach(obstacle => {
-        context.drawImage(obstacleTiles,
-            (obstacle % TileMapWidth) * TileSize, (obstacle / TileMapWidth) * TileSize, TileSize, TileSize,
-            x * TileSize, y * TileSize, TileSize, TileSize
-            )
-      })
+      drawTileOnCanvas(context, groundTiles, tile.groundType, x, y)
+      tile.obstacleType.foreach(drawTileOnCanvas(context, obstacleTiles, _, x, y))
     }
   }
   
   def endTurn(): Unit = {
-    game.endTurn()
-    selectedCharacter = None
-    textCurrentPlayer.text = f"Current Turn: Player ${game.currentPlayer + 1}"
+    if (game.endTurn()) {
+      selectedCharacter = None
+      menu.updateCurrentPlayerText(game.currentPlayer)
+    }
   }
   
   def drawSelectionOutline(canvas: Canvas): Unit = {

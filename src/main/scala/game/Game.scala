@@ -91,11 +91,14 @@ class Game(val onDamageCaused: (Int, Coordinate) => Unit) {
 
   //ends the turn and moves to the next player
   //ending a turn is disallowed as long as some character is still moving
-  def endTurn(): Unit = {
+  def endTurn(): Boolean = {
     if (!characterIsMoving && pendingPathRequests.get() == 0) {
       playerList(currentPlayer).characters.foreach(_.restoreMovementPoints())
       currentPlayer += 1
       if (currentPlayer == playerList.length) currentPlayer = 0
+      true
+    } else {
+      false
     }
   }
   
