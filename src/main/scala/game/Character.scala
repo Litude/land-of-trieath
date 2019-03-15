@@ -69,6 +69,8 @@ class Character(var maxHitPoints: Int = 100, val charType: CharacterType) {
   
   def isMoving: Boolean = walkingPath.isDefined
   
+  def isDead: Boolean = hitpoints <= 0
+  
   //attacks target character, returns the amount of damage caused
   def attackCharacter(target: Character): Int = {
     val originalHitpoints = target.hitpoints

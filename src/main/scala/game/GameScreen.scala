@@ -64,7 +64,7 @@ class GameScreen extends BaseScreen {
   game.playerList += testPlayer
   
   val testPlayer2 = new Player("other")
-  val otherChar1 = new Character(120, Monk)
+  val otherChar1 = new Character(30, Monk)
   otherChar1.moveTo(Coordinate(3, 6))
   testPlayer2.characters += otherChar1
   game.playerList += testPlayer2
@@ -73,6 +73,7 @@ class GameScreen extends BaseScreen {
     keyFrames = Seq(
       KeyFrame(Duration(TickDelay), onFinished = () => {
         game.updateGameState()
+        deselectDeadCharacter()
         menu.updateCharacterUI(selectedCharacter, selectedCharacter.map(game.getCharacterPlayer))
         clearCanvas(characterCanvas)
         drawSelectionOutline(characterCanvas)
@@ -264,6 +265,10 @@ class GameScreen extends BaseScreen {
     metricText.font = context.font
     metricText.strokeWidth = context.lineWidth
     metricText.layoutBounds.get
+  }
+  
+  def deselectDeadCharacter() = {
+    selectedCharacter = if (selectedCharacter.map(_.isDead).getOrElse(false)) None else selectedCharacter
   }
 }
 

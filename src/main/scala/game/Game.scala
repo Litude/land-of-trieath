@@ -55,6 +55,7 @@ class Game(val onDamageCaused: (Int, Coordinate) => Unit) {
   def updateGameState(): Unit = {
     val movingCharacters = playerList.flatMap(_.characters).filter(_.isMoving)
     movingCharacters.foreach(updateMovingCharacter)
+    removeDeadCharacters()
     characterIsMoving = !movingCharacters.isEmpty
   }
 
@@ -88,6 +89,13 @@ class Game(val onDamageCaused: (Int, Coordinate) => Unit) {
       character.walkAlongPath()
     }
   }
+  
+  def removeDeadCharacters(): Unit = {
+    playerList.foreach(player => player.characters.find(_.isDead) match {
+      case Some(deadCharacter) => player.characters -= deadCharacter
+      case None =>
+    })
+  }
 
   //ends the turn and moves to the next player
   //ending a turn is disallowed as long as some character is still moving
@@ -102,8 +110,9 @@ class Game(val onDamageCaused: (Int, Coordinate) => Unit) {
     }
   }
   
+  //Returns player of character, or -1 if the character belongs to no player (should probably never happen)
   def getCharacterPlayer(character: Character): Int = {
-    playerList.indexOf(playerList.find(_.characters.exists(_ == character)).get)
+    playerList.indexOf(playerList.find(_.characters.exists(_ == character)).getOrElse(ArrayBuffer[Character]()))
   }
   
   def tileIsWalkable(position: Coordinate, character: Character): Boolean = {
