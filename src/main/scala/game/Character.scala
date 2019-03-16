@@ -10,19 +10,19 @@ object Direction extends Enumeration {
   val North, East, South, West = Value
 }
 
-class Character(var maxHitPoints: Int = 100, val charType: CharacterType) {
-  val MaxWalkOffset = 14
+class Character(var maxHitPoints: Int = 100, val charType: CharacterType, var direction: Direction.Value) {
+  val MaxWalkOffset = Tile.Size / 2 - 1
   
   val attackPower = 22
   var hitpoints = maxHitPoints
   var walkingOffset = 0
-  var maxMovementPoints = 100
+  var maxMovementPoints = 20
   var movementPoints = maxMovementPoints
   var position = Coordinate(0, 0)
-  def frame = walkingOffset / 5
-  var direction = Direction.South
   var walkingPath: Option[ArrayBuffer[Coordinate]] = None
   var attackTarget: Option[Character] = None
+  
+  def frame = walkingOffset / 5
   
   def setPath(newPath: Option[ArrayBuffer[Coordinate]]): Unit = {
     walkingPath = newPath
