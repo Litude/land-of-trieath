@@ -43,9 +43,8 @@ class Character(var maxHitPoints: Int = 100, val charType: CharacterType, var di
   }
   
   def walkAlongPath(): Boolean = {
-    walkingPath.map(path => {
-      //update the path once we have walked across one tile
-      if (walkingOffset == 0) {
+    if (walkingOffset == 0) {
+      walkingPath.map(path => {
         //stop walking if at end of path or out of movement points
         if (path.length == 0 || movementPoints == 0) {
           walkingPath = None
@@ -60,14 +59,14 @@ class Character(var maxHitPoints: Int = 100, val charType: CharacterType, var di
           movementPoints -= 1
           false
         }
-      } else {
-        walkingOffset -= 1
-        false
-      }
-    }).getOrElse(false)
+      }).getOrElse(false)
+    } else {
+      walkingOffset -= 1
+      false
+    }
   }
   
-  def isMoving: Boolean = walkingPath.isDefined
+  def isMoving: Boolean = walkingPath.isDefined || walkingOffset != 0
   
   def isDead: Boolean = hitpoints <= 0
   

@@ -31,7 +31,7 @@ class GameScreen extends BaseScreen {
   var centerPosition = Coordinate(0, 0)
   var mousePosition = Coordinate(0, 0)
   val tileEffects = new TileEffects()
-  var reachableTiles = ArrayBuffer[Coordinate]()
+  var reachableTiles = Seq[Coordinate]()
   
   fill = Black
       
@@ -50,7 +50,6 @@ class GameScreen extends BaseScreen {
   mapPane.hgrow = Priority.Always
   
   val menu = new GameSideBar(MenuWidth, endTurn)
-  menu.updateCurrentPlayerText(game.currentPlayer)
   
   val layout = new HBox
   layout.children = Array(mapPane, menu)
@@ -58,17 +57,21 @@ class GameScreen extends BaseScreen {
  
   //add some test data
   val testChar = new Character(100, Warrior, Direction.South)
-  val testPlayer = new Player("tester", Human)
+  val testPlayer = new HumanPlayer("tester")
+  //testChar.moveTo(Coordinate(10, 0))
   testPlayer.characters += testChar
   val testChar2 = new Character(100, Monk, Direction.South)
   testChar2.moveTo(Coordinate(6, 3))
   testPlayer.characters += testChar2
   game.playerList += testPlayer
   
-  val testPlayer2 = new Player("other", Computer)
+  val testPlayer2 = new AIPlayer("other", new BasicAI)
   val otherChar1 = new Character(30, Monk, Direction.North)
   otherChar1.moveTo(Coordinate(3, 6))
   testPlayer2.characters += otherChar1
+  val otherChar2 = new Character(100, Monk, Direction.North)
+  otherChar2.moveTo(Coordinate(10, 20))
+  testPlayer2.characters += otherChar2
   game.playerList += testPlayer2
   
   val gameLoop = new Timeline {
@@ -76,6 +79,7 @@ class GameScreen extends BaseScreen {
       KeyFrame(Duration(TickDelay), onFinished = () => {
         game.updateGameState()
         deselectDeadCharacter()
+        menu.updateCurrentPlayerText(game.currentPlayer)
         menu.updateCharacterUI(selectedCharacter, selectedCharacter.map(game.getCharacterPlayer))
         clearCanvas(characterCanvas)
         highlightHoveredTile(characterCanvas)
@@ -99,11 +103,11 @@ class GameScreen extends BaseScreen {
         case MouseButton.Primary => {
           selectedCharacter = game.playerList.flatMap(_.characters).find(_.position == tileCoords)
           reachableTiles = selectedCharacter match {
-            case Some(character) if (game.getCharacterPlayer(character) == game.currentPlayer) => game.getReachableCharacterTiles(character)
-            case _ => ArrayBuffer()
+            case Some(character) if (game.getCharacterPlayer(character) == game.currentPlayer && game.currentPlayerType == Human) => game.getReachableCharacterTiles(character)
+            case _ => Seq()
           }
         }
-        case MouseButton.Secondary => {
+        case MouseButton.Secondary if game.currentPlayerType == Human => {
           selectedCharacter.foreach(character => {
             if (game.playerList(game.currentPlayer).characters.exists(_ == character)) {
               if (game.moveCharacter(character, tileCoords) == MovementResult.Attacking) {
@@ -176,7 +180,6 @@ class GameScreen extends BaseScreen {
   def endTurn(): Unit = {
     if (game.endTurn()) {
       selectedCharacter = None
-      menu.updateCurrentPlayerText(game.currentPlayer)
     }
   }
   
@@ -206,17 +209,19 @@ class GameScreen extends BaseScreen {
   }
   
   def updateReachableTiles(canvas: Canvas): Unit = {
-    selectedCharacter match {
-      case Some(character) if (character.isMoving) => {
-        reachableTiles.clear()
+    if (game.currentPlayerType == Human) {
+      selectedCharacter match {
+        case Some(character) if (character.isMoving) => {
+          reachableTiles = Seq()
+        }
+        case Some(character) if (reachableTiles.isEmpty && game.getCharacterPlayer(character) == game.currentPlayer) => {
+          reachableTiles = game.getReachableCharacterTiles(character)
+        }
+        case None if (!reachableTiles.isEmpty) => reachableTiles = Seq()
+        case _ =>
       }
-      case Some(character) if (reachableTiles.isEmpty && game.getCharacterPlayer(character) == game.currentPlayer) => {
-        reachableTiles = game.getReachableCharacterTiles(character)
-      }
-      case None if (!reachableTiles.isEmpty) => reachableTiles.clear()
-      case _ =>
+      highlightTiles(canvas, reachableTiles)
     }
-    highlightTiles(canvas, reachableTiles)
   }
   
   def highlightTiles(canvas: Canvas, tiles: Seq[Coordinate]): Unit = {

@@ -14,6 +14,7 @@ class Game(val onDamageCaused: (Int, Coordinate) => Unit) {
   val map = new Map(30, 30)
   val playerList: ArrayBuffer[Player] = ArrayBuffer[Player]()
   val pathFinder: PathFinder = new DjikstraFinder
+  val multiPathFinder: MultiPathFinder = new DjikstraFinder
   val walkableTileFinder: WalkableTileFinder = new DjikstraFinder
   var characterIsMoving = false
   var currentPlayer = 0
@@ -61,7 +62,7 @@ class Game(val onDamageCaused: (Int, Coordinate) => Unit) {
     }
   }
   
-  def getReachableCharacterTiles(character: Character): ArrayBuffer[Coordinate] = {
+  def getReachableCharacterTiles(character: Character): Seq[Coordinate] = {
     //get other player characters
     val characters = (0 until playerList.length)
       //.filter(_ == getCharacterPlayer(character))
@@ -72,11 +73,18 @@ class Game(val onDamageCaused: (Int, Coordinate) => Unit) {
     walkableTileFinder.findReachableTiles(map, characters, character.position, character.movementPoints)
   }
   
+  def getPathsToTargets(start: Coordinate, targets: Array[Coordinate], blockingCharacters: Array[Character]) = {
+    //val characters = playerList(currentPlayer).characters.filter(_ != character).toArray
+    //val targets = playerList.filter(_ != playerList(currentPlayer)).flatMap(_.characters).map(_.position).toArray
+    multiPathFinder.findPathsToPositions(map, blockingCharacters, start, targets)
+  }
+  
   def updateGameState(): Unit = {
     val movingCharacters = playerList.flatMap(_.characters).filter(_.isMoving)
     movingCharacters.foreach(updateMovingCharacter)
     removeDeadCharacters()
     characterIsMoving = !movingCharacters.isEmpty
+    updateAIPlayer()
   }
 
   //checks if we are bumping into our attack target (and attack) or some other character (stop moving),
@@ -139,5 +147,16 @@ class Game(val onDamageCaused: (Int, Coordinate) => Unit) {
   
   def tileIsWalkable(position: Coordinate, character: Character): Boolean = {
     !map(position.x, position.y).isSolid && !playerList.flatMap(_.characters).filter(_ != character).exists(character => character.position == position)
+  }
+  
+  def currentPlayerType: PlayerType = playerList(currentPlayer).playerType
+  
+  def updateAIPlayer(): Unit = {
+    playerList(currentPlayer) match {
+      case player: AIPlayer => {
+        if (player.ai.playTurn(this)) endTurn()
+      }
+      case _ =>
+    }
   }
 }

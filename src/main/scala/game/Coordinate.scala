@@ -20,6 +20,12 @@ case class Coordinate(val x: Int, val y: Int) {
     }
   }
   
+  def geometricDistance(that: Coordinate): Double = {
+    Math.sqrt(Math.pow(this.x - that.x, 2) + Math.pow(this.y - that.y, 2))
+  }
+  
+  def tileDistance(that: Coordinate): Int = Math.abs(this.x - that.x) + Math.abs(this.y - that.y)
+  
   def +(that: Coordinate) = Coordinate(this.x + that.x, this.y + that.y)
   def -(that: Coordinate) = Coordinate(this.x - that.x, this.y - that.y)
   def *(multiplier: Int) = Coordinate(this.x * multiplier, this.y * multiplier)
