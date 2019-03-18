@@ -1,27 +1,30 @@
-package game
+package game.ui
 
 import scala.collection.mutable.ArrayBuffer
 import scalafx.scene.canvas._
 import scalafx.scene.paint.Color._
 
+import game.core.Coordinate
+import game.core.Tile
+
 class TileEffects {
-  private var effects = ArrayBuffer[TileEffect]()
+  private var _effects = ArrayBuffer[TileEffect]()
   
   def +=(newEffect: TileEffect) = {
     if (newEffect.singleInstanceOnly) {
-      effects = effects.filter(_.getClass != newEffect.getClass) :+ newEffect
+      _effects = _effects.filter(_.getClass != newEffect.getClass) :+ newEffect
     } else {
-      effects += newEffect
+      _effects += newEffect
     }
   }
   
   def update(passedTime: Int): Unit = {
-    effects.foreach(_.update(passedTime))
-    effects = effects.filter(_.ttl > 0)
+    _effects.foreach(_.update(passedTime))
+    _effects = _effects.filter(_.ttl > 0)
   }
   
   def draw(canvas: Canvas): Unit = {
-    effects.foreach(_.draw(canvas))
+    _effects.foreach(_.draw(canvas))
   }
 }
 
@@ -82,7 +85,7 @@ class DamageCounter(val damage: Int, val position: Coordinate) extends TileEffec
     context.lineWidth = 2
 
     val string = damage.toString
-    val bounds = GUIUtils.getContextStringBounds(context, string)
+    val bounds = Utils.getContextStringBounds(context, string)
     val textWidth = bounds.getWidth
     val textHeight = bounds.getHeight
 

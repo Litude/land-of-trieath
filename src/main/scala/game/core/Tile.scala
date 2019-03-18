@@ -1,4 +1,4 @@
-package game
+package game.core
 
 class Tile(val groundType: Int, val obstacleType: Option[Int]) {
   def isSolid: Boolean = obstacleType.isDefined

@@ -1,4 +1,5 @@
-package game
+package game.ui
+
 import scalafx.scene.Scene
 
 trait BaseScreen extends Scene {

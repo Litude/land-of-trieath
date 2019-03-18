@@ -1,4 +1,4 @@
-package game
+package game.ui
 
 import scalafx.Includes._
 import scalafx.scene.layout.VBox
@@ -7,6 +7,8 @@ import scalafx.scene.shape.Rectangle
 import scalafx.scene.control.Button
 import scalafx.scene.paint.Color._
 import scalafx.scene.layout.Priority
+
+import game.core.Character
 
 class GameSideBar(width: Int, endTurn: () => Unit) extends VBox {
   
@@ -65,5 +67,4 @@ class GameSideBar(width: Int, endTurn: () => Unit) extends VBox {
       }
     }
   }
-  
 }

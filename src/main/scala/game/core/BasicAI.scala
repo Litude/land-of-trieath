@@ -1,4 +1,4 @@
-package game
+package game.core
 
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.concurrent.Future
@@ -15,8 +15,8 @@ class BasicAI extends PlayerAI {
       if (!movableCharacters.isEmpty) {
         val nextToMove = movableCharacters.head
         
-        val characters = game.playerList(game.currentPlayer).characters.filter(_ != nextToMove).toArray
-        val targets = game.playerList.filter(_ != game.playerList(game.currentPlayer)).flatMap(_.characters).toArray
+        val characters = game.playerList(game.currentPlayer).characters.filter(_ != nextToMove)
+        val targets = game.playerList.filter(_ != game.playerList(game.currentPlayer)).flatMap(_.characters)
         
         if (!targets.isEmpty) {
           calculating.set(true)
@@ -31,18 +31,18 @@ class BasicAI extends PlayerAI {
                 nextToMove.walkingPath = result(targetIndex)
                 nextToMove.attackTarget = Some(targets(targetIndex))
               } else {
-                nextToMove.movementPoints = 0
+                nextToMove.endTurn()
               }
               calculating.set(false)
             }
             case Failure(t) => {
+              nextToMove.endTurn()
               calculating.set(false)
-              nextToMove.movementPoints = 0
               throw(t)
             }
           }
         } else {
-          nextToMove.movementPoints = 0
+          nextToMove.endTurn()
         }
         false
       } else {

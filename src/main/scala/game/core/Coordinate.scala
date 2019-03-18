@@ -1,5 +1,4 @@
-package game
-
+package game.core
 
 case class Coordinate(val x: Int, val y: Int) {
   

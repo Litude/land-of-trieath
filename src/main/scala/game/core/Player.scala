@@ -1,4 +1,4 @@
-package game
+package game.core
 
 import scala.collection.mutable.ArrayBuffer
 

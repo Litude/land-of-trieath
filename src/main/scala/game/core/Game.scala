@@ -1,4 +1,4 @@
-package game
+package game.core
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Future
@@ -22,9 +22,8 @@ class Game(val onDamageCaused: (Int, Coordinate) => Unit) {
   val pendingPathRequests = new AtomicInteger(0)
 
   def moveCharacter(character: Character, destination: Coordinate): MovementResult.Value = {
-    
-    if (character.position != destination && character.movementPoints > 0) {
-      val currentPlayer = getCharacterPlayer(character)
+    val characterPlayer = getCharacterPlayer(character)
+    if (characterPlayer == currentPlayer && character.position != destination && character.movementPoints > 0) {
 
       //check if we clicked a character we can attack; if so, find the target character
       val targetCharacter = playerList.flatMap(_.characters).find(_.position == destination) match {
@@ -43,10 +42,10 @@ class Game(val onDamageCaused: (Int, Coordinate) => Unit) {
 
       //do the path finding in a Future since the calculations can cause a few frames to get skipped
       Future {
-        pathFinder.findPath(map, playerList.flatMap(_.characters).filter(!filteredCharacters.contains(_)).toArray, character.position, destination)
+        pathFinder.findPath(map, playerList.flatMap(_.characters).filter(!filteredCharacters.contains(_)), character.position, destination)
       }.onComplete {
         case Success(result) => {
-          character.setPath(result)
+          character.walkingPath = result
           characterIsMoving = characterIsMoving || result.isDefined
           character.attackTarget = targetCharacter
           pendingPathRequests.decrementAndGet()
@@ -63,19 +62,18 @@ class Game(val onDamageCaused: (Int, Coordinate) => Unit) {
   }
   
   def getReachableCharacterTiles(character: Character): Seq[Coordinate] = {
-    //get other player characters
-    val characters = (0 until playerList.length)
-      //.filter(_ == getCharacterPlayer(character))
-      .map(playerList)
-      .flatMap(_.characters)
-      .filter(_ != character)
-      .toArray
-    walkableTileFinder.findReachableTiles(map, characters, character.position, character.movementPoints)
+    if (getCharacterPlayer(character) == currentPlayer) {
+      val characters = (0 until playerList.length)
+        .map(playerList)
+        .flatMap(_.characters)
+        .filter(_ != character)
+      walkableTileFinder.findReachableTiles(map, characters, character.position, character.movementPoints)
+    } else {
+      Seq()
+    }
   }
   
-  def getPathsToTargets(start: Coordinate, targets: Array[Coordinate], blockingCharacters: Array[Character]) = {
-    //val characters = playerList(currentPlayer).characters.filter(_ != character).toArray
-    //val targets = playerList.filter(_ != playerList(currentPlayer)).flatMap(_.characters).map(_.position).toArray
+  def getPathsToTargets(start: Coordinate, targets: Seq[Coordinate], blockingCharacters: Seq[Character]) = {
     multiPathFinder.findPathsToPositions(map, blockingCharacters, start, targets)
   }
   
@@ -90,15 +88,18 @@ class Game(val onDamageCaused: (Int, Coordinate) => Unit) {
   //checks if we are bumping into our attack target (and attack) or some other character (stop moving),
   //else continue walking
   def updateMovingCharacter(character: Character): Boolean = {
-    if (character.movementPoints > 0 && character.walkingOffset == 0 && {
+    if (character.movementPoints > 0 && character.atEndOfTile && {
       character.walkingPath.flatMap(_.headOption) match {
         case Some(position) => {
+          character.direction = character.position.directionTo(position)
           if (character.attackTarget.map(_.position == position).getOrElse(false)) {
-            character.movementPoints = 0
             character.attackTarget.foreach(target => {
-              val damage = character.attackCharacter(target)
-              onDamageCaused(damage, target.position)
+              if (!target.isDead) {
+                val damage = character.attackCharacter(target)
+                onDamageCaused(damage, target.position)
+              }
             })
+            character.endTurn()
             character.clearPath()
             true
           }
@@ -129,10 +130,10 @@ class Game(val onDamageCaused: (Int, Coordinate) => Unit) {
   //ending a turn is disallowed as long as some character is still moving
   def endTurn(): Boolean = {
     if (!characterIsMoving && pendingPathRequests.get() == 0) {
-      playerList(currentPlayer).characters.foreach(_.restoreMovementPoints())
       do {
         currentPlayer = (currentPlayer + 1) % playerList.length
       } while (!playerList(currentPlayer).isAlive)
+      playerList(currentPlayer).characters.foreach(_.restoreMovementPoints())
       true
     } else {
       false

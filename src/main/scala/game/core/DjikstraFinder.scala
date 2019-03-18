@@ -1,25 +1,25 @@
-package game
+package game.core
 
 import scala.collection.mutable.ArrayBuffer
 
 class DjikstraFinder extends PathFinder with MultiPathFinder with WalkableTileFinder {
   
-  def findPath(map: Map, characters: Array[Character], start: Coordinate, goal: Coordinate): Option[ArrayBuffer[Coordinate]] = {
-    val nodes = performSearch(map, characters, start, Some(Array(goal)), Int.MaxValue - 1)
+  def findPath(map: Map, blockingCharacters: Seq[Character], start: Coordinate, goal: Coordinate): Option[ArrayBuffer[Coordinate]] = {
+    val nodes = performSearch(map, blockingCharacters, start, Some(Array(goal)), Int.MaxValue - 1)
     buildPathToPosition(nodes, goal)
   }
   
-  def findReachableTiles(map: Map, characters: Array[Character], start: Coordinate, distance: Int): Seq[Coordinate] = {
-    val nodes = performSearch(map, characters, start, None, distance)
-    listReachableTiles(nodes, distance)
-  }
-  
-  def findPathsToPositions(map: Map, characters: Array[Character], start: Coordinate, goals: Array[Coordinate]): Array[Option[ArrayBuffer[Coordinate]]] = {
-    val nodes = performSearch(map, characters, start, Some(goals), Int.MaxValue - 1)
+  def findPathsToPositions(map: Map, blockingCharacters: Seq[Character], start: Coordinate, goals: Seq[Coordinate]): Seq[Option[ArrayBuffer[Coordinate]]] = {
+    val nodes = performSearch(map, blockingCharacters, start, Some(goals), Int.MaxValue - 1)
     goals.map(buildPathToPosition(nodes, _))
   }
   
-  def performSearch(map: Map, characters: Array[Character], start: Coordinate, goals: Option[Array[Coordinate]], maxDistance: Int): Array[Array[PathNode]] = {
+  def findReachableTiles(map: Map, blockingCharacters: Seq[Character], start: Coordinate, distance: Int): Seq[Coordinate] = {
+    val nodes = performSearch(map, blockingCharacters, start, None, distance)
+    listReachableTiles(nodes, distance)
+  }
+  
+  def performSearch(map: Map, blockingCharacters: Seq[Character], start: Coordinate, goals: Option[Seq[Coordinate]], maxDistance: Int): Array[Array[PathNode]] = {
     
     val nodes = Array.tabulate[PathNode](map.width, map.height)((x, y) => new PathNode)
     nodes(start.x)(start.y).distance = 0
@@ -28,7 +28,7 @@ class DjikstraFinder extends PathFinder with MultiPathFinder with WalkableTileFi
     var searchFailed = false
     
     def tileIsWalkable(position: Coordinate): Boolean = {
-      !map(position.x, position.y).isSolid && !characters.exists(character => character.position == position)
+      !map(position.x, position.y).isSolid && !blockingCharacters.exists(character => character.position == position)
     }
     
     def findClosestUnvisitedNode: Option[Coordinate] = {
@@ -96,7 +96,7 @@ class DjikstraFinder extends PathFinder with MultiPathFinder with WalkableTileFi
       if (nodes(x)(y).explored && nodes(x)(y).distance <= maxDistance && nodes(x)(y).distance != 0)
     } yield Coordinate(x, y)
   }
-}
 
-class PathNode(var distance: Int = Int.MaxValue, var explored: Boolean = false)
+  class PathNode(var distance: Int = Int.MaxValue, var explored: Boolean = false)
+}
 

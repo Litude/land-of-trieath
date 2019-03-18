@@ -1,4 +1,4 @@
-package game
+package game.core
 
 trait PlayerAI {
   //returns true if done playing turn, false otherwise

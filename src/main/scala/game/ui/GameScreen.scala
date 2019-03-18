@@ -1,18 +1,17 @@
-package game
+package game.ui
 
 import scalafx.Includes._
 import scalafx.animation._
-import scalafx.scene.paint.Color._
-import scalafx.scene.image.Image
-import scalafx.scene.canvas._
-import scalafx.util.Duration
-import scalafx.scene.layout._
-import scalafx.scene.input._
+import scalafx.beans.property._
 import scalafx.geometry.Point2D
-import scalafx.scene.text.Text
+import scalafx.scene.canvas._
+import scalafx.scene.image.Image
+import scalafx.scene.input._
+import scalafx.scene.layout._
+import scalafx.scene.paint.Color._
+import scalafx.util.Duration
 
-import scala.collection.mutable.HashMap
-import scala.collection.mutable.ArrayBuffer
+import game.core._
 
 class GameScreen extends BaseScreen {
   
@@ -37,16 +36,17 @@ class GameScreen extends BaseScreen {
       
   val game = new Game(onDamageCaused)
   
-  val characterImageMap = new HashMap[String, Image]()
-  characterImageMap += (Warrior.toString -> new Image("file:img/warrior_m.png"))
-  characterImageMap += (Monk.toString -> new Image("file:img/townfolk1_m.png"))
+  val characterImageMap = Map(
+      Warrior.toString -> new Image("file:img/warrior_m.png"),
+      Monk.toString -> new Image("file:img/townfolk1_m.png")
+      )
 
-  val mapCanvas = new Canvas(game.map.width * Tile.Size, game.map.height * Tile.Size)
-  val characterCanvas = new Canvas(game.map.width * Tile.Size, game.map.height * Tile.Size)
-  drawGameMap(mapCanvas)
+  val backgroundCanvas = new Canvas(game.map.width * Tile.Size, game.map.height * Tile.Size)
+  val foregroundCanvas = new Canvas(game.map.width * Tile.Size, game.map.height * Tile.Size)
+  drawGameMap(backgroundCanvas)
   
   val mapPane = new Pane
-  mapPane.children = Array(mapCanvas, characterCanvas)
+  mapPane.children = Array(backgroundCanvas, foregroundCanvas)
   mapPane.hgrow = Priority.Always
   
   val menu = new GameSideBar(MenuWidth, endTurn)
@@ -81,12 +81,12 @@ class GameScreen extends BaseScreen {
         deselectDeadCharacter()
         menu.updateCurrentPlayerText(game.currentPlayer)
         menu.updateCharacterUI(selectedCharacter, selectedCharacter.map(game.getCharacterPlayer))
-        clearCanvas(characterCanvas)
-        highlightHoveredTile(characterCanvas)
-        updateReachableTiles(characterCanvas)
-        drawSelectionOutline(characterCanvas)
-        drawGameCharacters(characterCanvas)
-        drawScreenEffects(characterCanvas, TickDelay)
+        clearCanvas(foregroundCanvas)
+        highlightHoveredTile(foregroundCanvas)
+        updateReachableTiles(foregroundCanvas)
+        drawSelectionOutline(foregroundCanvas)
+        drawGameCharacters(foregroundCanvas)
+        drawScreenEffects(foregroundCanvas, TickDelay)
       })
     )
     cycleCount = Timeline.Indefinite
@@ -94,29 +94,24 @@ class GameScreen extends BaseScreen {
   gameLoop.play()
   
   mapPane.onMouseClicked = mouseEvent => {
-    //check that we clicked on the map canvas
-    if (mapCanvas.contains(mapCanvas.parentToLocal(mouseEvent.sceneX, mouseEvent.sceneY))) {
-      val worldCoords = mapCanvas.parentToLocal(mouseEvent.sceneX, mouseEvent.sceneY)
+    if (backgroundCanvas.contains(backgroundCanvas.parentToLocal(mouseEvent.sceneX, mouseEvent.sceneY))) {
+      val worldCoords = backgroundCanvas.parentToLocal(mouseEvent.sceneX, mouseEvent.sceneY)
       val tileCoords = worldToTile(worldCoords)
       
       mouseEvent.button match {
         case MouseButton.Primary => {
           selectedCharacter = game.playerList.flatMap(_.characters).find(_.position == tileCoords)
           reachableTiles = selectedCharacter match {
-            case Some(character) if (game.getCharacterPlayer(character) == game.currentPlayer && game.currentPlayerType == Human) => game.getReachableCharacterTiles(character)
+            case Some(character) if (game.currentPlayerType == Human) => game.getReachableCharacterTiles(character)
             case _ => Seq()
           }
         }
         case MouseButton.Secondary if game.currentPlayerType == Human => {
           selectedCharacter.foreach(character => {
-            if (game.playerList(game.currentPlayer).characters.exists(_ == character)) {
-              if (game.moveCharacter(character, tileCoords) == MovementResult.Attacking) {
-                this.tileEffects += new HighlightEffect(tileCoords)
-                
-              }
+            if (game.moveCharacter(character, tileCoords) == MovementResult.Attacking) {
+              this.tileEffects += new HighlightEffect(tileCoords)
             }
-            
-            })
+          })
         }
         case _ =>
       }
@@ -195,13 +190,25 @@ class GameScreen extends BaseScreen {
   
   def drawGameCharacters(canvas: Canvas): Unit = {
     val context = canvas.graphicsContext2D
+    context.save()
     game.playerList.flatMap(_.characters).foreach(character => {
       val walkOffset = Coordinate.fromDirection(character.direction) * character.walkingOffset * 2
+      val xPos = character.position.x * Tile.Size - walkOffset.x
+      val yPos = character.position.y * Tile.Size - walkOffset.y
       context.drawImage(characterImageMap(character.charType.toString),
           character.frame * Tile.Size, character.direction.id * CharacterHeight, Tile.Size, CharacterHeight,
-          character.position.x * Tile.Size - walkOffset.x, character.position.y * Tile.Size - walkOffset.y, Tile.Size, Tile.Size
+          xPos, yPos, Tile.Size, Tile.Size
           )
+      //draw a player colored badge in the upper-right corner
+      PlayerColors.lift(game.getCharacterPlayer(character)).foreach(color => {
+        context.fill = color
+        context.stroke = White
+        context.lineWidth = 1
+        context.strokeRect(xPos + 27, yPos + 1, 4, 4)
+        context.fillRect(xPos + 27, yPos + 1, 4, 4)
+      })
     })
+    context.restore()
   }
   
   def highlightHoveredTile(canvas: Canvas): Unit = {
@@ -211,7 +218,7 @@ class GameScreen extends BaseScreen {
   def updateReachableTiles(canvas: Canvas): Unit = {
     if (game.currentPlayerType == Human) {
       selectedCharacter match {
-        case Some(character) if (character.isMoving) => {
+        case Some(character) if (character.isMoving || character.movementPoints == 0) => {
           reachableTiles = Seq()
         }
         case Some(character) if (reachableTiles.isEmpty && game.getCharacterPlayer(character) == game.currentPlayer) => {
@@ -266,7 +273,7 @@ class GameScreen extends BaseScreen {
   def worldToTile(world: Coordinate) = Coordinate(world.x / Tile.Size, world.y / Tile.Size)
   
   def translateScene(): Unit = {
-    Array(mapCanvas, characterCanvas).foreach(canvas => {
+    Array(backgroundCanvas, foregroundCanvas).foreach(canvas => {
       canvas.translateX = camOffset.x + centerPosition.x
       canvas.translateY = camOffset.y + centerPosition.y
     })
