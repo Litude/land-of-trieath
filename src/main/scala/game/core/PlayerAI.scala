@@ -5,10 +5,10 @@ trait PlayerAI {
   def playTurn(game: Game): Boolean = {
     if (shouldMakeMove(game)) makeMove(game) else false
   }
-  
+
   def shouldMakeMove(game: Game): Boolean = {
     !game.characterIsMoving && game.pendingPathRequests.get == 0
   }
-  
+
   def makeMove(game: Game): Boolean
 }

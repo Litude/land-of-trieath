@@ -4,6 +4,9 @@ ThisBuild / organization := "com.game"
 lazy val battle = (project in file("."))
   .settings(
     name := "Land of Trieath",
-    libraryDependencies += "org.scalafx" %% "scalafx" % "8.0.144-R12"
+    libraryDependencies ++= Seq(
+      "org.scalafx" %% "scalafx" % "8.0.144-R12",
+      "com.typesafe.play" %% "play-json" % "2.6.10"
+    )
   )
 
