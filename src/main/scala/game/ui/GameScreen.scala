@@ -28,9 +28,10 @@ class GameScreen extends BaseScreen {
   val game = new Game(onDamageCaused)
 
   val characterImageMap = scala.collection.immutable.Map(
-      Warrior.toString -> new Image("file:img/warrior_m.png"),
-      Monk.toString -> new Image("file:img/townfolk1_m.png")
-      )
+    Warrior.toString -> new Image("file:img/warrior.png"),
+    Monk.toString -> new Image("file:img/monk.png"),
+    Ranger.toString -> new Image("file:img/ranger.png")
+    )
 
   val backgroundCanvas = new Canvas(game.map.width * Tile.Size, game.map.height * Tile.Size)
   val foregroundCanvas = new Canvas(game.map.width * Tile.Size, game.map.height * Tile.Size)
@@ -55,6 +56,9 @@ class GameScreen extends BaseScreen {
   testChar2.moveTo(Coordinate(6, 3))
   testPlayer.characters += testChar2
   game.playerList += testPlayer
+  val testChar3 = new Character(100, 20, Ranger, Direction.South)
+  testChar3.moveTo(Coordinate(10, 5))
+  testPlayer.characters += testChar3
 
   val testPlayer2 = new AIPlayer("other", new BasicAI)
   val otherChar1 = new Character(30, 20, Monk, Direction.North)
@@ -122,12 +126,13 @@ class GameScreen extends BaseScreen {
 
   onKeyPressed = keyEvent => {
     keyEvent.code match {
-        case KeyCode.Left => camOffset = Coordinate(camOffset.x + GameScreen.ScrollSpeed, camOffset.y)
-        case KeyCode.Right => camOffset = Coordinate(camOffset.x - GameScreen.ScrollSpeed, camOffset.y)
-        case KeyCode.Up => camOffset = Coordinate(camOffset.x, camOffset.y + GameScreen.ScrollSpeed)
-        case KeyCode.Down => camOffset = Coordinate(camOffset.x, camOffset.y - GameScreen.ScrollSpeed)
-        case _ =>
-      }
+      case KeyCode.Left => camOffset = Coordinate(camOffset.x + GameScreen.ScrollSpeed, camOffset.y)
+      case KeyCode.Right => camOffset = Coordinate(camOffset.x - GameScreen.ScrollSpeed, camOffset.y)
+      case KeyCode.Up => camOffset = Coordinate(camOffset.x, camOffset.y + GameScreen.ScrollSpeed)
+      case KeyCode.Down => camOffset = Coordinate(camOffset.x, camOffset.y - GameScreen.ScrollSpeed)
+      case KeyCode.S => selectedCharacter.foreach(_.clearPath())
+      case _ =>
+    }
     clipCameraToBounds()
     translateScene()
   }
@@ -141,9 +146,9 @@ class GameScreen extends BaseScreen {
 
     def drawTileOnCanvas(context: GraphicsContext, image: Image, index: Int, x: Int, y: Int): Unit = {
       context.drawImage(image,
-          (index % GameScreen.TileMapWidth) * Tile.Size, (index / GameScreen.TileMapWidth) * Tile.Size, Tile.Size, Tile.Size,
-          x * Tile.Size, y * Tile.Size, Tile.Size, Tile.Size
-          )
+        (index % GameScreen.TileMapWidth) * Tile.Size, (index / GameScreen.TileMapWidth) * Tile.Size, Tile.Size, Tile.Size,
+        x * Tile.Size, y * Tile.Size, Tile.Size, Tile.Size
+        )
     }
 
     val context = canvas.graphicsContext2D
@@ -183,9 +188,9 @@ class GameScreen extends BaseScreen {
       val xPos = character.position.x * Tile.Size - walkOffset.x
       val yPos = character.position.y * Tile.Size - walkOffset.y
       context.drawImage(characterImageMap(character.charType.toString),
-          character.frame * Tile.Size, character.direction.id * GameScreen.CharacterHeight, Tile.Size, GameScreen.CharacterHeight,
-          xPos, yPos, Tile.Size, Tile.Size
-          )
+        character.frame * Tile.Size, character.direction.id * GameScreen.CharacterHeight, Tile.Size, GameScreen.CharacterHeight,
+        xPos, yPos, Tile.Size, Tile.Size
+        )
       //draw a player colored badge in the upper-right corner
       GameScreen.PlayerColors.lift(game.characterPlayer(character)).foreach(color => {
         context.fill = color
@@ -228,16 +233,16 @@ class GameScreen extends BaseScreen {
   }
 
   def clipCameraToBounds(): Unit = {
-      camOffset = Coordinate(
-          Math.max(Math.min(camOffset.x, -centerPosition.x), centerPosition.x - GameScreen.MenuWidth),
-          Math.max(Math.min(camOffset.y, -centerPosition.y), centerPosition.y)
-          )
-      if (width.get.toInt - GameScreen.MenuWidth > game.map.width * Tile.Size) {
-        camOffset = Coordinate(-GameScreen.MenuWidth / 2, camOffset.y)
-      }
-      if (height.get.toInt > game.map.height * Tile.Size) {
-        camOffset = Coordinate(camOffset.x, 0)
-      }
+    camOffset = Coordinate(
+      Math.max(Math.min(camOffset.x, -centerPosition.x), centerPosition.x - GameScreen.MenuWidth),
+      Math.max(Math.min(camOffset.y, -centerPosition.y), centerPosition.y)
+      )
+    if (width.get.toInt - GameScreen.MenuWidth > game.map.width * Tile.Size) {
+      camOffset = Coordinate(-GameScreen.MenuWidth / 2, camOffset.y)
+    }
+    if (height.get.toInt > game.map.height * Tile.Size) {
+      camOffset = Coordinate(camOffset.x, 0)
+    }
   }
 
   def onResize(): Unit = {

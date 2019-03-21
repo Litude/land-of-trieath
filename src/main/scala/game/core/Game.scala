@@ -14,7 +14,6 @@ class Game(val onDamageCaused: (Int, Coordinate) => Unit) {
   val map = new Map(Map.TestMapSize, Map.TestMapSize)
   val playerList: ArrayBuffer[Player] = ArrayBuffer[Player]()
   val pathFinder: PathFinder = DjikstraFinder
-  val multiPathFinder: MultiPathFinder = DjikstraFinder
   val walkableTileFinder: WalkableTileFinder = DjikstraFinder
   var characterIsMoving = false
   var currentPlayer = 0
@@ -29,15 +28,17 @@ class Game(val onDamageCaused: (Int, Coordinate) => Unit) {
       .flatMap(_.characters)
       .find(character => character.position == destination && currentPlayer != characterPlayer(character))
 
-      //we need to remove the active and (possible) target character from the path finder so aren't considered blocking tiles
-      val filteredCharacters = Array(character) ++ targetCharacter
-
       //keep count of pending requests to prevent turn from being ended while some character may still be moving
       pendingPathRequests.incrementAndGet()
 
       //do the path finding in a Future since the calculations can cause a few frames to get skipped
       Future {
-        pathFinder.findPath(map, playerList.flatMap(_.characters).filter(!filteredCharacters.contains(_)), character.position, destination)
+        targetCharacter match {
+          case Some(target) => {
+            pathFinder.findPathToTarget(map, playerList.flatMap(_.characters).filter(_ != character), character.position, target.position, character.range)
+          }
+          case _ => pathFinder.findPath(map, playerList.flatMap(_.characters).filter(_ != character), character.position, destination)
+        }
       }.onComplete {
         case Success(result) => {
           character.walkingPath = result
@@ -57,25 +58,22 @@ class Game(val onDamageCaused: (Int, Coordinate) => Unit) {
     }
   }
 
-  private def isCharacterAllowedToMove(character: Character, destination: Coordinate): Boolean = {
-    val player = characterPlayer(character)
-    actionsAllowed && player == currentPlayer && character.position != destination && character.movementPoints > 0
-  }
-
   def updateReachableCharacterTiles(character: Character): Unit = {
     if (character.shouldUpdateReachable) {
-      if (actionsAllowed && characterPlayer(character) == currentPlayer) {
-        val characters = (0 until playerList.length)
+      val ownerPlayer = characterPlayer(character)
+      if (actionsAllowed && ownerPlayer == currentPlayer) {
+        val friendlyCharacters = playerList(ownerPlayer).characters.filter(_ != character)
+        val enemyCharacters = (0 until playerList.length)
+          .filter(_ != ownerPlayer)
           .map(playerList)
           .flatMap(_.characters)
-          .filter(_ != character)
-        character.reachableTiles = walkableTileFinder.findReachableTiles(map, characters, character.position, character.movementPoints)
+        character.reachableTiles = walkableTileFinder.findReachableTiles(map, friendlyCharacters, enemyCharacters, character.position, character.movementPoints)
       }
     }
   }
 
-  def pathsToTargets(start: Coordinate, targets: Seq[Coordinate], blockingCharacters: Seq[Character]): Seq[Option[ArrayBuffer[Coordinate]]] = {
-    multiPathFinder.findPathsToPositions(map, blockingCharacters, start, targets)
+  def distancesToTargets(start: Coordinate, targets: Seq[Coordinate], blockingCharacters: Seq[Character]): Seq[Int] = {
+    pathFinder.findDistancesToPositions(map, blockingCharacters, start, targets)
   }
 
   def updateGameState(): Unit = {
@@ -84,54 +82,6 @@ class Game(val onDamageCaused: (Int, Coordinate) => Unit) {
     removeDeadCharacters()
     characterIsMoving = !movingCharacters.isEmpty
     updateAIPlayer()
-  }
-
-  //checks if we are bumping into our attack target (and attack) or some other character (stop moving),
-  //else continue walking
-  //returns true if we stopped moving, false otherwise
-  def updateMovingCharacter(character: Character): Boolean = {
-    character.movementPoints > 0 && character.atEndOfTile match {
-      case true if characterAttackedTarget(character) => true
-      case true if isCharacterMovementIsObstructed(character) => true
-      case _ => character.walkAlongPath()
-    }
-  }
-
-  // returns true if successfully attacked target
-  def characterAttackedTarget(character: Character): Boolean = {
-    character.attackTarget match {
-      case Some(target) if (character.position.tileDistance(target.position) <= character.range) => {
-        character.direction = character.position.directionTo(target.position)
-        val damage = character.attackCharacter(target)
-        onDamageCaused(damage, target.position)
-        character.endTurn()
-        character.clearPath()
-        true
-      }
-      case _ => false
-    }
-  }
-
-  def isCharacterMovementIsObstructed(character: Character): Boolean = {
-    character.walkingPath.flatMap(_.headOption) match {
-      case Some(position) if (!tileIsWalkable(position, character)) => {
-        character.direction = character.position.directionToAdjacent(position)
-        character.clearPath()
-        true
-      }
-      case _ => false
-    }
-  }
-
-  def removeDeadCharacters(): Unit = {
-    playerList.foreach(player => player.characters.find(_.isDead) match {
-      case Some(deadCharacter) => player.characters -= deadCharacter
-      case None =>
-    })
-  }
-
-  def markAllCharacterReachablesDirty(): Unit = {
-    playerList.flatMap(_.characters).foreach(_.markReachableAsDirty)
   }
 
   //ends the turn and moves to the next player
@@ -156,13 +106,66 @@ class Game(val onDamageCaused: (Int, Coordinate) => Unit) {
     playerList.indexOf(playerList.find(_.characters.exists(_ == character)).getOrElse(ArrayBuffer[Character]()))
   }
 
-  def tileIsWalkable(position: Coordinate, character: Character): Boolean = {
+  def currentPlayerType: PlayerType = playerList(currentPlayer).playerType
+
+  private def tileIsWalkable(position: Coordinate, character: Character): Boolean = {
     !map(position.x, position.y).isSolid && !playerList.flatMap(_.characters).filter(_ != character).exists(character => character.position == position)
   }
 
-  def currentPlayerType: PlayerType = playerList(currentPlayer).playerType
+  private def isCharacterAllowedToMove(character: Character, destination: Coordinate): Boolean = {
+    val player = characterPlayer(character)
+    actionsAllowed && player == currentPlayer && character.position != destination && character.movementPoints > 0
+  }
 
-  def updateAIPlayer(): Unit = {
+  //checks if we are bumping into our attack target (and attack) or some other character (stop moving),
+  //else continue walking
+  //returns true if we stopped moving, false otherwise
+  private def updateMovingCharacter(character: Character): Boolean = {
+    character.movementPoints > 0 && character.atEndOfTile match {
+      case true if characterAttackedTarget(character) => true
+      case true if isCharacterMovementIsObstructed(character) => true
+      case _ => character.walkAlongPath()
+    }
+  }
+
+  // returns true if successfully attacked target
+  private def characterAttackedTarget(character: Character): Boolean = {
+    character.attackTarget match {
+      case Some(target) if (character.position.tileDistance(target.position) <= character.range) => {
+        character.direction = character.position.directionTo(target.position)
+        val damage = character.attackCharacter(target)
+        onDamageCaused(damage, target.position)
+        character.endTurn()
+        character.clearPath()
+        true
+      }
+      case _ => false
+    }
+  }
+
+  private def isCharacterMovementIsObstructed(character: Character): Boolean = {
+    character.walkingPath.flatMap(_.headOption) match {
+      case Some(position) if (!tileIsWalkable(position, character)) => {
+        character.direction = character.position.directionTo(position)
+        character.clearPath()
+        true
+      }
+      case _ => false
+    }
+  }
+
+  private def removeDeadCharacters(): Unit = {
+    playerList.foreach(player => player.characters.find(_.isDead) match {
+      case Some(deadCharacter) => player.characters -= deadCharacter
+      case None =>
+    })
+  }
+
+  private def markAllCharacterReachablesDirty(): Unit = {
+    playerList.flatMap(_.characters).foreach(_.markReachableAsDirty)
+  }
+
+  private def updateAIPlayer(): Unit = {
     playerList(currentPlayer) match {
       case player: AIPlayer => {
         if (player.ai.playTurn(this)) endTurn()

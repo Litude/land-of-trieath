@@ -93,12 +93,11 @@ class DamageCounter(val damage: Int, val position: Coordinate) extends TileEffec
     val textWidth = bounds.getWidth
     val textHeight = bounds.getHeight
 
-    context.strokeText(string,
-        position.x * Tile.Size + (Tile.Size - textWidth) / 2, position.y * Tile.Size + (Tile.Size + textHeight) / 2 - offset, Tile.Size
-        )
-    context.fillText(string,
-        position.x * Tile.Size + (Tile.Size - textWidth) / 2, position.y * Tile.Size + (Tile.Size + textHeight) / 2 - offset, Tile.Size
-        )
+    val xPos = position.x * Tile.Size + (Tile.Size - textWidth) / 2
+    val yPos = position.y * Tile.Size + (Tile.Size + textHeight) / 2 - offset
+
+    context.strokeText(string, xPos, yPos, Tile.Size)
+    context.fillText(string, xPos, yPos, Tile.Size)
     context.restore()
   }
 }

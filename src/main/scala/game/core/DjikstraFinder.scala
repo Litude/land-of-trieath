@@ -3,61 +3,92 @@ package game.core
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 
-case object DjikstraFinder extends PathFinder with MultiPathFinder with WalkableTileFinder {
+case object DjikstraFinder extends PathFinder with WalkableTileFinder {
+  val TraverseAllTiles = -1
 
   def findPath(map: Map, blockingCharacters: Seq[Character], start: Coordinate, goal: Coordinate): Option[ArrayBuffer[Coordinate]] = {
-    val nodes = performSearch(map, blockingCharacters, start, Some(Array(goal)), Int.MaxValue - 1)
+    val nodes = buildNodeMap(map, blockingCharacters, Seq(goal))
+    performSearch(nodes, start)
     buildPathToPosition(nodes, goal)
   }
 
-  def findPathsToPositions(map: Map, blockingCharacters: Seq[Character], start: Coordinate, goals: Seq[Coordinate]): Seq[Option[ArrayBuffer[Coordinate]]] = {
-    val nodes = performSearch(map, blockingCharacters, start, Some(goals), Int.MaxValue - 1)
-    goals.map(buildPathToPosition(nodes, _))
+  def findPathToTarget(
+    map: Map, blockingCharacters: Seq[Character], start: Coordinate, goal: Coordinate, attackerRange: Int)
+    : Option[ArrayBuffer[Coordinate]] = {
+    val nodes = buildNodeMapForRange(map, blockingCharacters, goal, attackerRange)
+    //if we stop searching when we hit the first goal, it is guaranteed to have the shortest distance
+    performSearch(nodes, start)
+    findMatchingNode(nodes, (node) => node.visited && node.goal) match {
+      case Some(position) => buildPathToPosition(nodes, position)
+      case _ => None
+    }
   }
 
-  def findReachableTiles(map: Map, blockingCharacters: Seq[Character], start: Coordinate, distance: Int): Seq[Coordinate] = {
-    val nodes = performSearch(map, blockingCharacters, start, None, distance)
+  def findDistancesToPositions(map: Map, blockingCharacters: Seq[Character], start: Coordinate, goals: Seq[Coordinate]): Seq[Int] = {
+    val nodes = buildNodeMap(map, blockingCharacters, goals)
+    performSearch(nodes, start, goals.length)
+    goals.map(coord => nodes(coord.x)(coord.y).distance)
+  }
+
+  def findReachableTiles(
+    map: Map, friendlyCharacters: Seq[Character], blockingCharacters: Seq[Character], start: Coordinate, distance: Int)
+    : Seq[Coordinate] = {
+    //consider friendly characters blocking, enemy characters as goals so they will be highlighted but the search won't traverse futher
+    val nodes = buildNodeMap(map, friendlyCharacters, blockingCharacters.map(_.position))
+    performSearch(nodes, start, TraverseAllTiles, distance)
     listReachableTiles(nodes, distance)
   }
 
-  private def performSearch(
-    map: Map, blockingCharacters: Seq[Character], start: Coordinate, goals: Option[Seq[Coordinate]], maxDistance: Int)
-    : Array[Array[PathNode]] = {
+  private def buildNodeMapForRange(map: Map, blockingCharacters: Seq[Character], target: Coordinate, attackerRange: Int) = {
+    val nodes = Array.tabulate[PathNode](map.width, map.height)((x, y) => {
+      if (Coordinate(x, y).tileDistance(target) <= attackerRange) new PathNode(true) else new PathNode
+    })
+    markUnwalkableTiles(nodes, map, blockingCharacters)
+    nodes
+  }
 
-    val nodes = Array.tabulate[PathNode](map.width, map.height)((x, y) => new PathNode)
-    nodes(start.x)(start.y).distance = 0
+  private def buildNodeMap(map: Map, blockingCharacters: Seq[Character], goals: Seq[Coordinate]) = {
+    val nodes = Array.fill[PathNode](map.width, map.height)(new PathNode)
+    goals.foreach(goal => nodes(goal.x)(goal.y).goal = true)
+    markUnwalkableTiles(nodes, map, blockingCharacters)
+    nodes
+  }
 
+  private def markUnwalkableTiles(nodes: Array[Array[PathNode]], map: Map, blockingCharacters: Seq[Character]): Unit = {
     def tileIsWalkable(position: Coordinate): Boolean = {
       !map(position.x, position.y).isSolid && !blockingCharacters.exists(character => character.position == position)
     }
-
-    //skip solid map tiles
     for {
       x <- 0 until map.width
       y <- 0 until map.height
     } {
-      if (!tileIsWalkable(Coordinate(x, y))) nodes(x)(y).walkable = false
+    if (!tileIsWalkable(Coordinate(x, y))) nodes(x)(y).walkable = false
     }
+  }
 
-    findClosestUnvisitedNode(nodes, maxDistance).foreach(traverseNode(nodes, _, goals, 0, maxDistance))
-    nodes
+  private def performSearch(
+    nodes: Array[Array[PathNode]], start: Coordinate, goalsToFind: Int = 1, maxDistance: Int = Int.MaxValue - 1)
+    : Unit = {
+    nodes(start.x)(start.y).distance = 0
+    findClosestUnvisitedNode(nodes, maxDistance).foreach(traverseNode(nodes, _, goalsToFind, 0, maxDistance))
   }
 
   @tailrec private def traverseNode(
-    nodes: Array[Array[PathNode]], current: Coordinate, goals: Option[Seq[Coordinate]], goalsFound: Int, maxDistance: Int)
+    nodes: Array[Array[PathNode]], current: Coordinate, goalsToFind: Int, goalsFound: Int, maxDistance: Int)
     : Unit = {
 
-    nodes(current.x)(current.y).explored = true
+    nodes(current.x)(current.y).visited = true
+
+    var currentlyFound = goalsFound
     //proceed further only if we are not at a goal
-    if (!goals.map(_.exists(_ == current)).getOrElse(false)) {
+    if (!nodes(current.x)(current.y).goal) {
       updateNeighborDistances(nodes, current)
+    } else {
+      currentlyFound += 1
     }
-    val newGoals = {
-      goalsFound + (if (goals.map(_.exists(_ == current)).getOrElse(false)) 1 else 0)
-    }
-    if (goals.map(newGoals < _.length).getOrElse(true)) {
+    if (goalsToFind == TraverseAllTiles || currentlyFound < goalsToFind) {
       findClosestUnvisitedNode(nodes, maxDistance) match {
-        case Some(node) => traverseNode(nodes, node, goals, newGoals, maxDistance)
+        case Some(node) => traverseNode(nodes, node, goalsToFind, currentlyFound, maxDistance)
         case _ =>
       }
     }
@@ -89,6 +120,19 @@ case object DjikstraFinder extends PathFinder with MultiPathFinder with Walkable
     index
   }
 
+  private def findMatchingNode(nodes: Array[Array[PathNode]], predicate: PathNode => Boolean): Option[Coordinate] = {
+    @tailrec def findRecurser(x: Int, y: Int): (Int, Int) = {
+      (x, y) match {
+        case (x, y) if (x == nodes.length) => (-1, -1)
+        case (x, y) if (y == nodes(x).length) => findRecurser(x + 1, 0)
+        case (x, y) if (predicate(nodes(x)(y))) => (x, y)
+        case _ => findRecurser(x, y + 1)
+      }
+    }
+    val index = findRecurser(0, 0)
+    if (index == (-1, -1)) None else Some(Coordinate(index._1, index._2))
+  }
+
   private def buildPathToPosition(nodes: Array[Array[PathNode]], goalPosition: Coordinate): Option[ArrayBuffer[Coordinate]] = {
     if (nodes(goalPosition.x)(goalPosition.y).distance != Int.MaxValue) {
       val path = ArrayBuffer[Coordinate]()
@@ -109,11 +153,14 @@ case object DjikstraFinder extends PathFinder with MultiPathFinder with Walkable
     for {
       x <- 0 until nodes.length
       y <- 0 until nodes(0).length
-      if (nodes(x)(y).explored && nodes(x)(y).distance <= maxDistance && nodes(x)(y).distance != 0)
+      if (nodes(x)(y).visited && nodes(x)(y).distance <= maxDistance && nodes(x)(y).distance != 0)
     } yield Coordinate(x, y)
   }
 
-  class PathNode(var distance: Int = Int.MaxValue, var explored: Boolean = false, var walkable: Boolean = true) {
-    def shouldVisit: Boolean = !explored && walkable
+  class PathNode(var distance: Int = Int.MaxValue, var visited: Boolean = false, var walkable: Boolean = true, var goal: Boolean = false) {
+    def this(goal: Boolean) = {
+      this(Int.MaxValue, false, true, goal)
+    }
+    def shouldVisit: Boolean = !visited && walkable
   }
 }

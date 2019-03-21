@@ -2,9 +2,14 @@ package game.core
 
 import scala.collection.mutable.ArrayBuffer
 
-sealed trait CharacterType
+sealed trait CharacterType {
+  val range: Int = 1
+}
 case object Warrior extends CharacterType
 case object Monk extends CharacterType
+case object Ranger extends CharacterType {
+  override val range = 4
+}
 
 class Character(var maxHitPoints: Int, var maxMovementPoints: Int, val charType: CharacterType, var direction: Direction.Value) {
 
@@ -14,7 +19,7 @@ class Character(var maxHitPoints: Int, var maxMovementPoints: Int, val charType:
   private var _movementPoints = maxMovementPoints
 
   val attackPower = 22
-  val range = 1
+  val range = charType.range
   var hitpoints = maxHitPoints
   var position = Coordinate(0, 0)
   var attackTarget: Option[Character] = None
@@ -88,7 +93,7 @@ class Character(var maxHitPoints: Int, var maxMovementPoints: Int, val charType:
   }
 
   private def updateCharacterHeading(path: ArrayBuffer[Coordinate]): Boolean = {
-    direction = position.directionToAdjacent(path.head)
+    direction = position.directionTo(path.head)
     position = path.head
     path.remove(0)
     _walkingOffset = MaxWalkOffset

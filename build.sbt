@@ -7,6 +7,7 @@ lazy val battle = (project in file("."))
     libraryDependencies ++= Seq(
       "org.scalafx" %% "scalafx" % "8.0.144-R12",
       "com.typesafe.play" %% "play-json" % "2.6.10"
-    )
+    ),
+    scalacOptions := Seq("-unchecked", "-deprecation")
   )
 

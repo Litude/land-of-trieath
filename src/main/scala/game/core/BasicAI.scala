@@ -21,18 +21,15 @@ class BasicAI extends PlayerAI {
         if (!targets.isEmpty) {
           calculating.set(true)
           Future {
-            game.pathsToTargets(nextToMove.position, targets.map(_.position), characters)
+            val distances = game.distancesToTargets(nextToMove.position, targets.map(_.position), characters)
+            val targetIndex = distances.zipWithIndex.min._2
+            if (distances(targetIndex) != Int.MaxValue) {
+              game.moveCharacter(nextToMove, targets(targetIndex).position)
+            } else {
+              nextToMove.endTurn()
+            }
           }.onComplete {
             case Success(result) => {
-              val pathLengths = result.map(_.map(_.length).getOrElse(Int.MaxValue))
-              val shortestPath = pathLengths.min
-              if (shortestPath < Int.MaxValue) {
-                val targetIndex = pathLengths.indexOf(shortestPath)
-                nextToMove.walkingPath = result(targetIndex)
-                nextToMove.attackTarget = Some(targets(targetIndex))
-              } else {
-                nextToMove.endTurn()
-              }
               calculating.set(false)
             }
             case Failure(t) => {
