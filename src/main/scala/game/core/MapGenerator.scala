@@ -168,6 +168,7 @@ object MapGenerator {
       }
 
       next += currentDirection
+      //TODO: Still need to ensure the end point is inside the other player spawn!
     } while (!atCorridorCarverEndPosition(direction, next, width, height))
     coordinates += next
     coordinates
