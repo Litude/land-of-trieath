@@ -1,0 +1,44 @@
+[
+    {
+        "name": "Stump",
+        "tiles": [[0]]
+    },
+    {
+        "name": "Bush",
+        "tiles": [[1]],
+        "randomDisallowed": false
+    },
+    {
+        "name": "Rock",
+        "tiles": [[2]],
+        "randomDisallowed": true
+    },
+    {
+        "name": "Flower",
+        "tiles": [[3]]
+    },
+    {
+        "name": "Fern",
+        "tiles": [[4]]
+    },
+    {
+        "name": "Plant",
+        "tiles": [[5]]
+    },
+    {
+        "name": "Flower Bed",
+        "tiles": [[6]]
+    },
+    {
+        "name": "Mushroom",
+        "tiles": [[7]]
+    },
+    {
+        "name": "Tree",
+        "tiles": [[8, 16, 24], [9, 17, 25], [10, 18, 26]]
+    },
+    {
+        "name": "Tree Trunk",
+        "tiles": [[11, 19]]
+    }
+]

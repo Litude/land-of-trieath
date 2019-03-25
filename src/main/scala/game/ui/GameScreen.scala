@@ -23,14 +23,39 @@ class GameScreen extends BaseScreen {
   var mousePosition = Coordinate(0, 0)
   val tileEffects = new TileEffects()
 
+  var showDebugInfo = false
+
   fill = Black
 
-  val game = new Game(onDamageCaused)
+  //add some test data
+  val testPlayer = new HumanPlayer("tester")
+  testPlayer.characters ++= Seq(
+    new Character(100, 20, Warrior, Direction.South),
+    new Character(100, 20, Monk, Direction.South),
+    new Character(100, 20, Ranger, Direction.South),
+    new Character(100, 20, Monk, Direction.South),
+    new Character(100, 20, Warrior, Direction.South),
+    new Character(100, 20, Warrior, Direction.South),
+    new Character(100, 20, Ranger, Direction.South)
+  )
 
-  val characterImageMap = scala.collection.immutable.Map(
-    Warrior.toString -> new Image("file:img/warrior.png"),
-    Monk.toString -> new Image("file:img/monk.png"),
-    Ranger.toString -> new Image("file:img/ranger.png")
+  val testPlayer2 = new AIPlayer("other", new BasicAI)
+  testPlayer2.characters ++= Seq(
+    new Character(30, 20, Monk, Direction.North),
+    new Character(100, 20, Monk, Direction.North),
+    new Character(100, 20, Warrior, Direction.North),
+    new Character(100, 20, Monk, Direction.North),
+    new Character(100, 20, Ranger, Direction.North),
+    new Character(100, 20, Ranger, Direction.North),
+    new Character(100, 20, Monk, Direction.North)
+  )
+
+  val game = new Game(Array(testPlayer, testPlayer2), onDamageCaused)
+
+  val characterImageMap = scala.collection.immutable.Map[CharacterType, Image](
+    Warrior -> new Image("file:img/warrior.png"),
+    Monk -> new Image("file:img/monk.png"),
+    Ranger -> new Image("file:img/ranger.png")
     )
 
   val backgroundCanvas = new Canvas(game.map.width * Tile.Size, game.map.height * Tile.Size)
@@ -47,28 +72,6 @@ class GameScreen extends BaseScreen {
   layout.children = Array(mapPane, menu)
   content = layout
 
-  //add some test data
-  val testChar = new Character(100, 20, Warrior, Direction.South)
-  val testPlayer = new HumanPlayer("tester")
-  //testChar.moveTo(Coordinate(10, 0))
-  testPlayer.characters += testChar
-  val testChar2 = new Character(100, 20, Monk, Direction.South)
-  testChar2.moveTo(Coordinate(6, 3))
-  testPlayer.characters += testChar2
-  game.playerList += testPlayer
-  val testChar3 = new Character(100, 20, Ranger, Direction.South)
-  testChar3.moveTo(Coordinate(10, 5))
-  testPlayer.characters += testChar3
-
-  val testPlayer2 = new AIPlayer("other", new BasicAI)
-  val otherChar1 = new Character(30, 20, Monk, Direction.North)
-  otherChar1.moveTo(Coordinate(3, 6))
-  testPlayer2.characters += otherChar1
-  val otherChar2 = new Character(100, 20, Monk, Direction.North)
-  otherChar2.moveTo(Coordinate(10, 20))
-  testPlayer2.characters += otherChar2
-  game.playerList += testPlayer2
-
   val gameLoop = new Timeline {
     keyFrames = Seq(
       KeyFrame(Duration(GameScreen.TickDelay), onFinished = () => {
@@ -77,6 +80,7 @@ class GameScreen extends BaseScreen {
         menu.updateCurrentPlayerText(game.currentPlayer)
         menu.updateCharacterUI(selectedCharacter, selectedCharacter.map(game.characterPlayer))
         clearCanvas(foregroundCanvas)
+        if (showDebugInfo) drawDebugInfo(foregroundCanvas)
         highlightHoveredTile(foregroundCanvas)
         updateReachableTiles(foregroundCanvas)
         drawSelectionOutline(foregroundCanvas)
@@ -131,6 +135,7 @@ class GameScreen extends BaseScreen {
       case KeyCode.Up => camOffset = Coordinate(camOffset.x, camOffset.y + GameScreen.ScrollSpeed)
       case KeyCode.Down => camOffset = Coordinate(camOffset.x, camOffset.y - GameScreen.ScrollSpeed)
       case KeyCode.S => selectedCharacter.foreach(_.clearPath())
+      case KeyCode.D => showDebugInfo = !showDebugInfo
       case _ =>
     }
     clipCameraToBounds()
@@ -155,8 +160,8 @@ class GameScreen extends BaseScreen {
     val groundTiles = new Image("file:img/tiles_ground.png")
     val obstacleTiles = new Image("file:img/tiles_obstacles.png")
     for {
-      y <- 0 until game.map.width
-      x <- 0 until game.map.height
+      x <- 0 until game.map.width
+      y <- 0 until game.map.height
     } {
       val tile = game.map(x, y)
       drawTileOnCanvas(context, groundTiles, tile.groundType, x, y)
@@ -187,7 +192,7 @@ class GameScreen extends BaseScreen {
       val walkOffset = Coordinate.fromDirection(character.direction) * character.walkingOffset * 2
       val xPos = character.position.x * Tile.Size - walkOffset.x
       val yPos = character.position.y * Tile.Size - walkOffset.y
-      context.drawImage(characterImageMap(character.charType.toString),
+      context.drawImage(characterImageMap(character.charType),
         character.frame * Tile.Size, character.direction.id * GameScreen.CharacterHeight, Tile.Size, GameScreen.CharacterHeight,
         xPos, yPos, Tile.Size, Tile.Size
         )
@@ -200,6 +205,23 @@ class GameScreen extends BaseScreen {
         context.fillRect(xPos + GameScreen.PlayerBadgeOffset, yPos + 1, GameScreen.PlayerBadgeSize, GameScreen.PlayerBadgeSize)
       })
     })
+    context.restore()
+  }
+
+  def drawDebugInfo(canvas: Canvas): Unit = {
+    val context = canvas.graphicsContext2D
+    context.save()
+    context.fill = Blue
+    for {
+      x <- 0 until game.map.width
+      y <- 0 until game.map.height
+    } {
+      if (game.map.corridors.exists(_ == Coordinate(x, y))) {
+        context.globalAlpha = 0.2
+        context.fillRect(x * Tile.Size, y * Tile.Size, Tile.Size, Tile.Size)
+        context.globalAlpha = 1
+      }
+    }
     context.restore()
   }
 

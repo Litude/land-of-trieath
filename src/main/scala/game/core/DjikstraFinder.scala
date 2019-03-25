@@ -121,15 +121,7 @@ case object DjikstraFinder extends PathFinder with WalkableTileFinder {
   }
 
   private def findMatchingNode(nodes: Array[Array[PathNode]], predicate: PathNode => Boolean): Option[Coordinate] = {
-    @tailrec def findRecurser(x: Int, y: Int): (Int, Int) = {
-      (x, y) match {
-        case (x, y) if (x == nodes.length) => (-1, -1)
-        case (x, y) if (y == nodes(x).length) => findRecurser(x + 1, 0)
-        case (x, y) if (predicate(nodes(x)(y))) => (x, y)
-        case _ => findRecurser(x, y + 1)
-      }
-    }
-    val index = findRecurser(0, 0)
+    val index = Utils.find2DArrayIndex(nodes, predicate)
     if (index == (-1, -1)) None else Some(Coordinate(index._1, index._2))
   }
 

@@ -10,15 +10,22 @@ object MovementResult extends Enumeration {
   val Failed, Moving, Attacking = Value
 }
 
-class Game(val onDamageCaused: (Int, Coordinate) => Unit) {
-  val map = new Map(Map.TestMapSize, Map.TestMapSize)
-  val playerList: ArrayBuffer[Player] = ArrayBuffer[Player]()
+class Game(val playerList: Array[Player], val onDamageCaused: (Int, Coordinate) => Unit) {
+  val map = MapGenerator.generateMap(Map.TestMapSize, Map.TestMapSize, playerList.length)
+  //val map = new Map(Map.TestMapSize, Map.TestMapSize)
   val pathFinder: PathFinder = DjikstraFinder
   val walkableTileFinder: WalkableTileFinder = DjikstraFinder
   var characterIsMoving = false
   var currentPlayer = 0
 
   val pendingPathRequests = new AtomicInteger(0)
+
+  val stuff = playerList.zip(map.spawns).foreach({case (player, spawnList) => {
+    player.characters.zip(spawnList).foreach({case (character, spawn) => {
+      character.position = spawn.position
+      character.direction = spawn.direction
+    }})
+  }})
 
   def moveCharacter(character: Character, destination: Coordinate): MovementResult.Value = {
     if (isCharacterAllowedToMove(character, destination)) {

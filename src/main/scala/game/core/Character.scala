@@ -8,10 +8,10 @@ sealed trait CharacterType {
 case object Warrior extends CharacterType
 case object Monk extends CharacterType
 case object Ranger extends CharacterType {
-  override val range = 4
+  override val range = 8
 }
 
-class Character(var maxHitPoints: Int, var maxMovementPoints: Int, val charType: CharacterType, var direction: Direction.Value) {
+class Character(var maxHitPoints: Int, var maxMovementPoints: Int, val charType: CharacterType, var direction: Direction) {
 
   val MaxWalkOffset = Tile.Size / 2 - 1
 
@@ -62,10 +62,6 @@ class Character(var maxHitPoints: Int, var maxMovementPoints: Int, val charType:
   def clearPath(): Unit = {
     walkingPath = None
     attackTarget = None
-  }
-
-  def moveTo(newPosition: Coordinate) {
-    position = newPosition
   }
 
   def restoreMovementPoints(): Unit = {

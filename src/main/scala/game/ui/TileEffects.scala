@@ -89,7 +89,7 @@ class DamageCounter(val damage: Int, val position: Coordinate) extends TileEffec
     context.lineWidth = 2
 
     val string = damage.toString
-    val bounds = Utils.getContextStringBounds(context, string)
+    val bounds = UIUtils.getContextStringBounds(context, string)
     val textWidth = bounds.getWidth
     val textHeight = bounds.getHeight
 

@@ -6,7 +6,7 @@ import scalafx.beans.property.ReadOnlyObjectProperty
 
 import javafx.geometry.Bounds
 
-object Utils {
+object UIUtils {
   def getContextStringBounds(context: GraphicsContext, text: String): Bounds = {
     val metricText = new Text
     metricText.text = text
