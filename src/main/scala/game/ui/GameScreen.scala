@@ -83,8 +83,8 @@ class GameScreen extends BaseScreen {
         if (showDebugInfo) drawDebugInfo(foregroundCanvas)
         highlightHoveredTile(foregroundCanvas)
         updateReachableTiles(foregroundCanvas)
-        drawSelectionOutline(foregroundCanvas)
         drawGameCharacters(foregroundCanvas)
+        drawSelectedCharacterDetails(foregroundCanvas)
         drawScreenEffects(foregroundCanvas, GameScreen.TickDelay)
       })
     )
@@ -175,15 +175,32 @@ class GameScreen extends BaseScreen {
     }
   }
 
-  def drawSelectionOutline(canvas: Canvas): Unit = {
-    val context = canvas.getGraphicsContext2D
+  def drawSelectedCharacterDetails(canvas: Canvas): Unit = {
+    val context = canvas.graphicsContext2D
+    context.save()
     selectedCharacter.foreach(character => {
       val player = game.playerList.indexOf(game.playerList.find(_.characters.exists(_ == character)).get)
       val walkOffset = Coordinate.fromDirection(character.direction) * character.walkingOffset * 2
-      context.setStroke(GameScreen.PlayerColors(player))
-      context.strokeRect(character.position.x * Tile.Size - walkOffset.x, character.position.y * Tile.Size - walkOffset.y, Tile.Size, Tile.Size)
+      context.stroke = GameScreen.PlayerColors(player)
+      val xPos = character.position.x * Tile.Size - walkOffset.x
+      val yPos = character.position.y * Tile.Size - walkOffset.y
+      context.strokeRect(xPos, yPos, Tile.Size, Tile.Size)
+
+      //draw hitpoints bar
+      context.stroke = White
+      context.lineWidth = 1
+      context.fill = Red
+      context.strokeRect(xPos + 1, yPos - GameScreen.CharacterHitpointsHeight - 2, Tile.Size - 2, GameScreen.CharacterHitpointsHeight)
+      context.fillRect(xPos + 1, yPos - GameScreen.CharacterHitpointsHeight - 2, Tile.Size - 2, GameScreen.CharacterHitpointsHeight)
+
+      val hitpointsFraction = character.hitpoints.toDouble / character.maxHitPoints
+      context.fill = Green
+      context.fillRect(xPos + 1, yPos - GameScreen.CharacterHitpointsHeight - 2, (Tile.Size - 2) * hitpointsFraction, GameScreen.CharacterHitpointsHeight)
     })
+    context.restore()
+
   }
+
 
   def drawGameCharacters(canvas: Canvas): Unit = {
     val context = canvas.graphicsContext2D
@@ -192,12 +209,28 @@ class GameScreen extends BaseScreen {
       val walkOffset = Coordinate.fromDirection(character.direction) * character.walkingOffset * 2
       val xPos = character.position.x * Tile.Size - walkOffset.x
       val yPos = character.position.y * Tile.Size - walkOffset.y
+      val characterPlayer = game.characterPlayer(character)
+
+      //draw glow below current human player characters with remaining movement points
+      if (!character.isMoving && game.currentPlayerType == Human && characterPlayer == game.currentPlayer && character.movementPoints > 0) {
+        val timeValue = (System.currentTimeMillis % GameScreen.MovementRemainingPeriod).toInt
+        val multiplier = if (timeValue < GameScreen.MovementRemainingPeriod / 2) {
+          GameScreen.MovementRemainingPeriod / 2 - timeValue
+        } else {
+          timeValue - GameScreen.MovementRemainingPeriod / 2
+        }
+        context.globalAlpha = 0.6 * multiplier / (GameScreen.MovementRemainingPeriod / 2)
+        context.lineWidth = 1
+        context.stroke = Gold
+        context.strokeRect(xPos, yPos, Tile.Size, Tile.Size)
+        context.globalAlpha = 1.0
+      }
       context.drawImage(characterImageMap(character.charType),
         character.frame * Tile.Size, character.direction.id * GameScreen.CharacterHeight, Tile.Size, GameScreen.CharacterHeight,
         xPos, yPos, Tile.Size, Tile.Size
         )
       //draw a player colored badge in the upper-right corner
-      GameScreen.PlayerColors.lift(game.characterPlayer(character)).foreach(color => {
+      GameScreen.PlayerColors.lift(characterPlayer).foreach(color => {
         context.fill = color
         context.stroke = White
         context.lineWidth = 1
@@ -250,7 +283,7 @@ class GameScreen extends BaseScreen {
   }
 
   def clearCanvas(canvas: Canvas): Unit = {
-    val context = canvas.getGraphicsContext2D
+    val context = canvas.graphicsContext2D
     context.clearRect(0, 0, canvas.width.get, canvas.height.get)
   }
 
@@ -309,7 +342,11 @@ object GameScreen {
   val ScrollSpeed = 16
   val TickDelay = 17 //milliseconds
   val MenuWidth = 200
+
   val PlayerBadgeOffset = 27
   val PlayerBadgeSize = 4
+  val CharacterHitpointsHeight = 4
+
+  val MovementRemainingPeriod = 2000
 
 }
