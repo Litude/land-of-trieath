@@ -3,7 +3,6 @@ img/source/
 target/
 project/target/
 project/project/
-.vscode/
 .ensime_cache/
 .settings/
 .cache-main

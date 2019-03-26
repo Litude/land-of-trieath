@@ -1,0 +1,100 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "command": "sbt",
+    "type": "shell",
+    "tasks": [
+        {
+            "label": "Run",
+            "type": "shell",
+            "command": "sbt run",
+            "problemMatcher": []
+        },
+        {
+            "label": "Build (Background)",
+            "options": {
+				"shell": {
+					"executable": "sbt"
+				}
+            },
+            "command": "~compile",
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "sbt",
+                "fileLocation": "absolute",
+                "pattern": {
+                    "regexp": "^\\[(warn|error)\\] ([^:]*):(\\d+):(?:(\\d+):)?\\s+(.*)$",
+                    "severity": 1,
+                    "file": 2,
+                    "line": 3,
+                    "column": 4,
+                    "message": 5
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^\\[info\\] Compiling \\d+ Scala sources? to .*$",
+                    "endsPattern": "^\\d+\\. Waiting for source changes in project .*\\.\\.\\. \\(press enter to interrupt\\)$"
+                }
+        },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Lint (Background)",
+            "options": {
+				"shell": {
+					"executable": "sbt"
+				}
+            },
+            "command": "~scalastyle",
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "sbt",
+                "fileLocation": "absolute",
+                "pattern": {
+                    "regexp": "^\\[(warn|error)\\] ([^:]*):(\\d+):(?:(\\d+):)?\\s+(.*)$",
+                    "severity": 1,
+                    "file": 2,
+                    "line": 3,
+                    "column": 4,
+                    "message": 5
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^\\[info\\] scalastyle using config .*$",
+                    "endsPattern": "^\\d+\\. Waiting for source changes in project .*\\.\\.\\. \\(press enter to interrupt\\)$"
+                }
+            }
+        },
+        {
+            "label": "Lint and Build (Background)",
+            "options": {
+				"shell": {
+					"executable": "sbt"
+				}
+            },
+            "command": "~ ;scalastyle ;compile",
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "sbt",
+                "fileLocation": "absolute",
+                "pattern": {
+                    "regexp": "^\\[(warn|error)\\] ([^:]*):(\\d+):(?:(\\d+):)?\\s+(.*)$",
+                    "severity": 1,
+                    "file": 2,
+                    "line": 3,
+                    "column": 4,
+                    "message": 5
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^\\[info\\] scalastyle using config .*$",
+                    "endsPattern": "^\\d+\\. Waiting for source changes in project .*\\.\\.\\. \\(press enter to interrupt\\)$"
+                }
+            }
+        }
+    ]
+}

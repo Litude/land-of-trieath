@@ -12,11 +12,11 @@ object MovementResult extends Enumeration {
 
 class Game(val playerList: Array[Player], val onDamageCaused: (Int, Coordinate) => Unit) {
   val map = MapGenerator.generateMap(Map.TestMapSize, Map.TestMapSize, playerList.length)
-  //val map = new Map(Map.TestMapSize, Map.TestMapSize)
   val pathFinder: PathFinder = DjikstraFinder
   val walkableTileFinder: WalkableTileFinder = DjikstraFinder
   var characterIsMoving = false
   var currentPlayer = 0
+  var projectiles = ArrayBuffer[Projectile]()
 
   val pendingPathRequests = new AtomicInteger(0)
 
@@ -87,6 +87,7 @@ class Game(val playerList: Array[Player], val onDamageCaused: (Int, Coordinate) 
     val movingCharacters = playerList.flatMap(_.characters).filter(_.isMoving)
     movingCharacters.foreach(updateMovingCharacter)
     removeDeadCharacters()
+    updateProjectiles()
     characterIsMoving = !movingCharacters.isEmpty
     updateAIPlayer()
   }
@@ -106,7 +107,7 @@ class Game(val playerList: Array[Player], val onDamageCaused: (Int, Coordinate) 
     }
   }
 
-  def actionsAllowed: Boolean = !characterIsMoving && pendingPathRequests.get == 0
+  def actionsAllowed: Boolean = !characterIsMoving && pendingPathRequests.get == 0 && projectiles.length == 0
 
   //Returns player of character, or -1 if the character belongs to no player (should probably never happen)
   def characterPlayer(character: Character): Int = {
@@ -140,14 +141,22 @@ class Game(val playerList: Array[Player], val onDamageCaused: (Int, Coordinate) 
     character.attackTarget match {
       case Some(target) if (character.position.tileDistance(target.position) <= character.range) => {
         character.direction = character.position.directionTo(target.position)
-        val damage = character.attackCharacter(target)
-        onDamageCaused(damage, target.position)
+        if (character.isRangedFighter && character.position.tileDistance(target.position) > 1) {
+          projectiles += new Projectile(character, target)
+        } else {
+          characterAttackTarget(character, target)
+        }
         character.endTurn()
         character.clearPath()
         true
       }
       case _ => false
     }
+  }
+
+  private def characterAttackTarget(attacker: Character, target: Character): Unit = {
+    val damage = attacker.attackCharacter(target)
+    onDamageCaused(damage, target.position)
   }
 
   private def isCharacterMovementIsObstructed(character: Character): Boolean = {
@@ -166,6 +175,14 @@ class Game(val playerList: Array[Player], val onDamageCaused: (Int, Coordinate) 
       case Some(deadCharacter) => player.characters -= deadCharacter
       case None =>
     })
+  }
+
+  private def updateProjectiles(): Unit = {
+    projectiles.foreach(_.update())
+    projectiles.filter(_.reachedTarget).foreach(projectile => {
+      characterAttackTarget(projectile.attacker, projectile.target)
+    })
+    projectiles = projectiles.filter(!_.reachedTarget)
   }
 
   private def markAllCharacterReachablesDirty(): Unit = {

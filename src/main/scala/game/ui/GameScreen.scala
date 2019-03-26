@@ -5,7 +5,7 @@ import scalafx.animation._
 import scalafx.beans.property._
 import scalafx.geometry.Point2D
 import scalafx.scene.canvas._
-import scalafx.scene.image.Image
+import scalafx.scene.image._
 import scalafx.scene.input._
 import scalafx.scene.layout._
 import scalafx.scene.paint.Color._
@@ -52,6 +52,8 @@ class GameScreen extends BaseScreen {
 
   val game = new Game(Array(testPlayer, testPlayer2), onDamageCaused)
 
+  val projectileImage = new Image("file:img/arrow.png")
+
   val characterImageMap = scala.collection.immutable.Map[CharacterType, Image](
     Warrior -> new Image("file:img/warrior.png"),
     Monk -> new Image("file:img/monk.png"),
@@ -85,6 +87,7 @@ class GameScreen extends BaseScreen {
         updateReachableTiles(foregroundCanvas)
         drawGameCharacters(foregroundCanvas)
         drawSelectedCharacterDetails(foregroundCanvas)
+        drawProjectiles(foregroundCanvas)
         drawScreenEffects(foregroundCanvas, GameScreen.TickDelay)
       })
     )
@@ -335,6 +338,14 @@ class GameScreen extends BaseScreen {
   def drawScreenEffects(canvas: Canvas, delay: Int): Unit = {
     this.tileEffects.update(delay)
     this.tileEffects.draw(canvas)
+  }
+
+  def drawProjectiles(canvas: Canvas): Unit = {
+    val context = canvas.getGraphicsContext2D
+    game.projectiles.foreach(projectile => {
+      val rotatedImage = UIUtils.rotateImage(projectileImage, projectile.angle)
+      context.drawImage(rotatedImage, projectile.position.x, projectile.position.y)
+    })
   }
 
   def deselectDeadCharacter(): Unit = {

@@ -108,7 +108,7 @@ class Character(var maxHitPoints: Int, var maxMovementPoints: Int, val charType:
 
   def isDead: Boolean = hitpoints <= 0
 
-  def isRangedFigter: Boolean = range > 1
+  def isRangedFighter: Boolean = range > 1
 
   //attacks target character, returns the amount of damage caused
   def attackCharacter(target: Character): Int = {

@@ -20,7 +20,7 @@ class Map(val width: Int, val height: Int) {
 }
 
 object Map {
-  val TestMapSize = 40
+  val TestMapSize = 30
 }
 
 case class CharacterSpawn(position: Coordinate, direction: Direction)

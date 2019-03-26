@@ -33,6 +33,8 @@ case class Coordinate(val x: Int, val y: Int) {
 
   def tileDistance(that: Coordinate): Int = Math.abs(this.x - that.x) + Math.abs(this.y - that.y)
 
+  def vectorLength: Double = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2))
+
   def +(that: Coordinate): Coordinate = Coordinate(this.x + that.x, this.y + that.y)
   def +(that: Direction): Coordinate = this + Coordinate.fromDirection(that)
   def -(that: Coordinate): Coordinate = Coordinate(this.x - that.x, this.y - that.y)
