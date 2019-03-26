@@ -136,6 +136,7 @@ class GameScreen extends BaseScreen {
       case KeyCode.Down => camOffset = Coordinate(camOffset.x, camOffset.y - GameScreen.ScrollSpeed)
       case KeyCode.S => selectedCharacter.foreach(_.clearPath())
       case KeyCode.D => showDebugInfo = !showDebugInfo
+      case KeyCode.Tab => selectNextPlayerCharacter()
       case _ =>
     }
     clipCameraToBounds()
@@ -145,6 +146,14 @@ class GameScreen extends BaseScreen {
   mapPane.onMouseMoved = mouseEvent => {
     val mapPoint = backgroundCanvas.parentToLocal(mouseEvent.sceneX, mouseEvent.sceneY)
     hoveredTile = worldToTile(Coordinate(mapPoint.x.toInt, mapPoint.y.toInt))
+  }
+
+  def selectNextPlayerCharacter(): Unit = {
+    val characterList = game.playerList(game.currentPlayer).characters
+    selectedCharacter = selectedCharacter.map(characterList.indexOf).getOrElse(-1) match {
+      case -1 => characterList.headOption
+      case i => characterList.lift((i + 1) % characterList.length)
+    }
   }
 
   def drawGameMap(canvas: Canvas): Unit = {
