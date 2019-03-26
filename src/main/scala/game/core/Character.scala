@@ -19,6 +19,7 @@ class Character(var maxHitPoints: Int, var maxMovementPoints: Int, val charType:
   private var _movementPoints = maxMovementPoints
 
   val attackPower = 22
+  val defensePower = 1
   val range = charType.range
   var hitpoints = maxHitPoints
   var position = Coordinate(0, 0)
@@ -27,6 +28,19 @@ class Character(var maxHitPoints: Int, var maxMovementPoints: Int, val charType:
   private var _reachableTiles = Seq[Coordinate]()
   private var _shouldUpdateReachable = true
   private var _walkingPath: Option[ArrayBuffer[Coordinate]] = None
+
+  def drawingPosition: Coordinate = {
+    val walkOffset = Coordinate.fromDirection(direction) * walkingOffset * 2
+    val xPos = position.x * Tile.Size - walkOffset.x
+    val yPos = position.y * Tile.Size - walkOffset.y
+    Coordinate(xPos, yPos)
+  }
+
+  def occupiesPoint(point: Coordinate): Boolean = {
+    val drawPos = drawingPosition
+    point.x >= drawingPosition.x && point.x < drawingPosition.x + Tile.Size &&
+    point.y >= drawingPosition.y && point.y < drawingPosition.y + Tile.Size
+  }
 
   def walkingPath: Option[ArrayBuffer[Coordinate]] = _walkingPath
   def walkingPath_= (newPath: Option[ArrayBuffer[Coordinate]]): Unit = {
@@ -99,6 +113,7 @@ class Character(var maxHitPoints: Int, var maxMovementPoints: Int, val charType:
   }
 
   def endTurn(): Unit = {
+    _shouldUpdateReachable = true
     _movementPoints = 0
   }
 

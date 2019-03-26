@@ -52,14 +52,6 @@ class GameScreen extends BaseScreen {
 
   val game = new Game(Array(testPlayer, testPlayer2), onDamageCaused)
 
-  val projectileImage = new Image("file:img/arrow.png")
-
-  val characterImageMap = scala.collection.immutable.Map[CharacterType, Image](
-    Warrior -> new Image("file:img/warrior.png"),
-    Monk -> new Image("file:img/monk.png"),
-    Ranger -> new Image("file:img/ranger.png")
-    )
-
   val backgroundCanvas = new Canvas(game.map.width * Tile.Size, game.map.height * Tile.Size)
   val foregroundCanvas = new Canvas(game.map.width * Tile.Size, game.map.height * Tile.Size)
   drawGameMap(backgroundCanvas)
@@ -68,7 +60,13 @@ class GameScreen extends BaseScreen {
   mapPane.children = Array(backgroundCanvas, foregroundCanvas)
   mapPane.hgrow = Priority.Always
 
-  val menu = new GameSideBar(GameScreen.MenuWidth, () => endTurn())
+  val menu = new GameSideBar(
+    GameScreen.MenuWidth,
+    () => stopCharacterMovement(),
+    () => selectNextPlayerCharacter(),
+    () => skipSelectedCharacterTurn(),
+    () => endTurn()
+  )
 
   val layout = new HBox
   layout.children = Array(mapPane, menu)
@@ -80,7 +78,7 @@ class GameScreen extends BaseScreen {
         game.updateGameState()
         deselectDeadCharacter()
         menu.updateCurrentPlayerText(game.currentPlayer)
-        menu.updateCharacterUI(selectedCharacter, selectedCharacter.map(game.characterPlayer))
+        menu.updateCharacterUI(game, selectedCharacter, selectedCharacter.map(game.characterPlayer))
         clearCanvas(foregroundCanvas)
         if (showDebugInfo) drawDebugInfo(foregroundCanvas)
         highlightHoveredTile(foregroundCanvas)
@@ -102,7 +100,7 @@ class GameScreen extends BaseScreen {
 
       mouseEvent.button match {
         case MouseButton.Primary => {
-          selectedCharacter = game.playerList.flatMap(_.characters).find(_.position == tileCoords)
+          selectedCharacter = game.playerList.flatMap(_.characters).find(_.occupiesPoint(Coordinate(worldCoords.x.toInt, worldCoords.y.toInt)))
         }
         case MouseButton.Secondary if game.currentPlayerType == Human => {
           selectedCharacter.foreach(character => {
@@ -137,7 +135,7 @@ class GameScreen extends BaseScreen {
       case KeyCode.Right => camOffset = Coordinate(camOffset.x - GameScreen.ScrollSpeed, camOffset.y)
       case KeyCode.Up => camOffset = Coordinate(camOffset.x, camOffset.y + GameScreen.ScrollSpeed)
       case KeyCode.Down => camOffset = Coordinate(camOffset.x, camOffset.y - GameScreen.ScrollSpeed)
-      case KeyCode.S => selectedCharacter.foreach(_.clearPath())
+      case KeyCode.S => stopCharacterMovement()
       case KeyCode.D => showDebugInfo = !showDebugInfo
       case KeyCode.Tab => selectNextPlayerCharacter()
       case _ =>
@@ -157,6 +155,22 @@ class GameScreen extends BaseScreen {
       case -1 => characterList.headOption
       case i => characterList.lift((i + 1) % characterList.length)
     }
+  }
+
+  def stopCharacterMovement(): Unit = {
+    selectedCharacter.foreach(character => {
+      if (game.characterPlayer(character) == game.currentPlayer) {
+      character.clearPath()
+      }
+    })
+  }
+
+  def skipSelectedCharacterTurn(): Unit = {
+    selectedCharacter.foreach(character => {
+      if (game.characterPlayer(character) == game.currentPlayer) {
+      character.endTurn()
+      }
+    })
   }
 
   def drawGameMap(canvas: Canvas): Unit = {
@@ -192,22 +206,22 @@ class GameScreen extends BaseScreen {
     context.save()
     selectedCharacter.foreach(character => {
       val player = game.playerList.indexOf(game.playerList.find(_.characters.exists(_ == character)).get)
-      val walkOffset = Coordinate.fromDirection(character.direction) * character.walkingOffset * 2
       context.stroke = GameScreen.PlayerColors(player)
-      val xPos = character.position.x * Tile.Size - walkOffset.x
-      val yPos = character.position.y * Tile.Size - walkOffset.y
-      context.strokeRect(xPos, yPos, Tile.Size, Tile.Size)
+      val position = character.drawingPosition
+      context.strokeRect(position.x, position.y, Tile.Size, Tile.Size)
 
       //draw hitpoints bar
       context.stroke = White
       context.lineWidth = 1
       context.fill = Red
-      context.strokeRect(xPos + 1, yPos - GameScreen.CharacterHitpointsHeight - 2, Tile.Size - 2, GameScreen.CharacterHitpointsHeight)
-      context.fillRect(xPos + 1, yPos - GameScreen.CharacterHitpointsHeight - 2, Tile.Size - 2, GameScreen.CharacterHitpointsHeight)
+      context.strokeRect(position.x + 1, position.y - GameScreen.CharacterHitpointsHeight - 2, Tile.Size - 2, GameScreen.CharacterHitpointsHeight)
+      context.fillRect(position.x + 1, position.y - GameScreen.CharacterHitpointsHeight - 2, Tile.Size - 2, GameScreen.CharacterHitpointsHeight)
 
       val hitpointsFraction = character.hitpoints.toDouble / character.maxHitPoints
       context.fill = Green
-      context.fillRect(xPos + 1, yPos - GameScreen.CharacterHitpointsHeight - 2, (Tile.Size - 2) * hitpointsFraction, GameScreen.CharacterHitpointsHeight)
+      context.fillRect(
+        position.x + 1, position.y - GameScreen.CharacterHitpointsHeight - 2, (Tile.Size - 2) * hitpointsFraction, GameScreen.CharacterHitpointsHeight
+      )
     })
     context.restore()
 
@@ -218,9 +232,7 @@ class GameScreen extends BaseScreen {
     val context = canvas.graphicsContext2D
     context.save()
     game.playerList.flatMap(_.characters).foreach(character => {
-      val walkOffset = Coordinate.fromDirection(character.direction) * character.walkingOffset * 2
-      val xPos = character.position.x * Tile.Size - walkOffset.x
-      val yPos = character.position.y * Tile.Size - walkOffset.y
+      val position = character.drawingPosition
       val characterPlayer = game.characterPlayer(character)
 
       //draw glow below current human player characters with remaining movement points
@@ -234,20 +246,20 @@ class GameScreen extends BaseScreen {
         context.globalAlpha = 0.6 * multiplier / (GameScreen.MovementRemainingPeriod / 2)
         context.lineWidth = 1
         context.stroke = Gold
-        context.strokeRect(xPos, yPos, Tile.Size, Tile.Size)
+        context.strokeRect(position.x, position.y, Tile.Size, Tile.Size)
         context.globalAlpha = 1.0
       }
-      context.drawImage(characterImageMap(character.charType),
+      context.drawImage(GameScreen.CharacterImageMap(character.charType),
         character.frame * Tile.Size, character.direction.id * GameScreen.CharacterHeight, Tile.Size, GameScreen.CharacterHeight,
-        xPos, yPos, Tile.Size, Tile.Size
+        position.x, position.y, Tile.Size, Tile.Size
         )
       //draw a player colored badge in the upper-right corner
       GameScreen.PlayerColors.lift(characterPlayer).foreach(color => {
         context.fill = color
         context.stroke = White
         context.lineWidth = 1
-        context.strokeRect(xPos + GameScreen.PlayerBadgeOffset, yPos + 1, GameScreen.PlayerBadgeSize, GameScreen.PlayerBadgeSize)
-        context.fillRect(xPos + GameScreen.PlayerBadgeOffset, yPos + 1, GameScreen.PlayerBadgeSize, GameScreen.PlayerBadgeSize)
+        context.strokeRect(position.x + GameScreen.PlayerBadgeOffset, position.y + 1, GameScreen.PlayerBadgeSize, GameScreen.PlayerBadgeSize)
+        context.fillRect(position.x + GameScreen.PlayerBadgeOffset, position.y + 1, GameScreen.PlayerBadgeSize, GameScreen.PlayerBadgeSize)
       })
     })
     context.restore()
@@ -343,7 +355,7 @@ class GameScreen extends BaseScreen {
   def drawProjectiles(canvas: Canvas): Unit = {
     val context = canvas.getGraphicsContext2D
     game.projectiles.foreach(projectile => {
-      val rotatedImage = UIUtils.rotateImage(projectileImage, projectile.angle)
+      val rotatedImage = UIUtils.rotateImage(GameScreen.ProjectileImage, projectile.angle)
       context.drawImage(rotatedImage, projectile.position.x, projectile.position.y)
     })
   }
@@ -354,10 +366,18 @@ class GameScreen extends BaseScreen {
 }
 
 object GameScreen {
+  val ProjectileImage = new Image("file:img/arrow.png")
+
+  val CharacterImageMap = scala.collection.immutable.Map[CharacterType, Image](
+    Warrior -> new Image("file:img/warrior.png"),
+    Monk -> new Image("file:img/monk.png"),
+    Ranger -> new Image("file:img/ranger.png")
+    )
 
   val PlayerColors = Array(Blue, Red, Green, Yellow)
 
   val CharacterHeight = 36
+  val CharacterWidth = 32
   val TileMapWidth = 8
   val ScrollSpeed = 16
   val TickDelay = 17 //milliseconds

@@ -2,6 +2,7 @@ package game.ui
 
 import scalafx.scene.canvas.GraphicsContext
 import scalafx.scene.image._
+import scalafx.scene.paint.Color
 import scalafx.scene.paint.Color._
 import scalafx.scene.SnapshotParameters
 import scalafx.scene.text.Text
@@ -26,5 +27,9 @@ object UIUtils {
     // scalastyle:off null
     imageView.snapshot(snapshotParams, null)
     // scalastyle:on null
+  }
+
+  def colorToWebString(color: Color): String = {
+    f"#${(color.red * 255).toInt}%02X${(color.green * 255).toInt}%02X${(color.blue * 255).toInt}%02X"
   }
 }
