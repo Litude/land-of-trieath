@@ -1,26 +1,22 @@
 package game.core
 
 import scala.collection.mutable.ArrayBuffer
+import scala.util.Random
 
-sealed trait CharacterType {
-  val range: Int = 1
-}
-case object Warrior extends CharacterType
-case object Monk extends CharacterType
-case object Ranger extends CharacterType {
-  override val range = 8
-}
+class Character(charType: String) {
 
-class Character(var maxHitPoints: Int, var maxMovementPoints: Int, val charType: CharacterType, var direction: Direction) {
+  val characterClass = CharacterClass.get(charType)
+  var direction: Direction = Direction.North
 
-  val MaxWalkOffset = Tile.Size / 2 - 1
+  def maxHitPoints: Int = characterClass.hitpoints
+  def maxMovementPoints: Int = characterClass.movementPoints
+  def attackPower: Int = characterClass.attackPower
+  def defensePower: Int = characterClass.defensePower
+  def range: Int = characterClass.range
 
   private var _walkingOffset = 0
   private var _movementPoints = maxMovementPoints
 
-  val attackPower = 22
-  val defensePower = 1
-  val range = charType.range
   var hitpoints = maxHitPoints
   var position = Coordinate(0, 0)
   var attackTarget: Option[Character] = None
@@ -106,7 +102,7 @@ class Character(var maxHitPoints: Int, var maxMovementPoints: Int, val charType:
     direction = position.directionTo(path.head)
     position = path.head
     path.remove(0)
-    _walkingOffset = MaxWalkOffset
+    _walkingOffset = Character.MaxWalkOffset
     _walkingOffset -= 1
     _movementPoints -= 1
     false
@@ -127,9 +123,35 @@ class Character(var maxHitPoints: Int, var maxMovementPoints: Int, val charType:
 
   //attacks target character, returns the amount of damage caused
   def attackCharacter(target: Character): Int = {
+    val randomFactor = attackPower / Character.AttackRandomFraction
+    val randomMultiplier = 2 * Random.nextDouble() - 1.0 // random value between -1.0 and 1.0
+
+    // calculate base attack
+    var finalAttackPower: Int = attackPower + (randomMultiplier * randomFactor).round.toInt
+
+    // apply possible ranged penalty
+    finalAttackPower = {
+      if (this.position.tileDistance(target.position) == 1) {
+        (finalAttackPower * characterClass.meleePenalty).toInt
+      } else {
+        finalAttackPower
+      }
+    }
+
+    // apply possible attack bonus against target class
+    finalAttackPower = (finalAttackPower * (characterClass.attackBonus.getOrElse(target.characterClass.toString, 1.0))).round.toInt
+
+    // finally reduce target defense from attack
+    finalAttackPower = Math.max(finalAttackPower - target.defensePower, 0)
+
     val originalHitpoints = target.hitpoints
-    target.hitpoints = Math.max(target.hitpoints - attackPower, 0)
+    target.hitpoints = Math.max(target.hitpoints - finalAttackPower, 0)
     this._movementPoints = 0
     originalHitpoints - target.hitpoints
   }
+}
+
+object Character {
+  val AttackRandomFraction = 10.0
+  val MaxWalkOffset = Tile.Size / 2 - 1
 }

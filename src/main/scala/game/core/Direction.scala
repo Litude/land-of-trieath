@@ -20,6 +20,8 @@ sealed trait Direction {
 }
 object Direction {
   val NumDirections = 4
+  val Values: Seq[Direction] = Seq(North, East, South, West)
+
   case object North extends Direction {
     val id = 0
     val orientationMap = scala.collection.Map[Orientation, Direction](
@@ -56,7 +58,5 @@ object Direction {
     )
     val isVertical = false
   }
-
-  def values: Seq[Direction] = Seq(North, East, South, West)
 
 }

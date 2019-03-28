@@ -16,16 +16,20 @@ object MapObject {
     override def reads(json: JsValue): JsResult[Option[Int]] = json.validateOpt[Int]
   }
 
-  implicit val fromJson: Reads[MapObject] = (
+  implicit val objectFromJson: Reads[MapObject] = (
     (JsPath \ "name").read[String] and
     (JsPath \ "tiles").read[List[List[Option[Int]]]] and
     (JsPath \ "randomDisallowed").read[Boolean].orElse(Reads.pure(false))
     )(MapObject.apply _)
 
-  def readFromFile(filename: String): Seq[MapObject] = {
+  val Values = MapObject.readFromFile("definitions/map_objects.json")
+
+  def mapGeneratorObjects: Seq[MapObject] = Values.filter(!_.randomDisallowed)
+
+  private def readFromFile(filename: String): Seq[MapObject] = {
     val fileContent = Source.fromFile(filename).getLines.mkString
     val json = Json.parse(fileContent)
-    val testResult = json.validate[Seq[MapObject]]
-    testResult.get
+    val parsedObjects = json.validate[Seq[MapObject]]
+    parsedObjects.get
   }
 }

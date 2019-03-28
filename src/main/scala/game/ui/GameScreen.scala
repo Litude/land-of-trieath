@@ -30,24 +30,27 @@ class GameScreen extends BaseScreen {
   //add some test data
   val testPlayer = new HumanPlayer("tester")
   testPlayer.characters ++= Seq(
-    new Character(100, 20, Warrior, Direction.South),
-    new Character(100, 20, Monk, Direction.South),
-    new Character(100, 20, Ranger, Direction.South),
-    new Character(100, 20, Monk, Direction.South),
-    new Character(100, 20, Warrior, Direction.South),
-    new Character(100, 20, Warrior, Direction.South),
-    new Character(100, 20, Ranger, Direction.South)
+    new Character("Warrior"),
+    new Character("Monk"),
+    new Character("Ranger"),
+    new Character("Monk"),
+    new Character("Warrior"),
+    new Character("Warrior"),
+    new Character("Ninja"),
+    new Character("Mage"),
+    new Character("Ranger")
   )
 
   val testPlayer2 = new AIPlayer("other", new BasicAI)
   testPlayer2.characters ++= Seq(
-    new Character(30, 20, Monk, Direction.North),
-    new Character(100, 20, Monk, Direction.North),
-    new Character(100, 20, Warrior, Direction.North),
-    new Character(100, 20, Monk, Direction.North),
-    new Character(100, 20, Ranger, Direction.North),
-    new Character(100, 20, Ranger, Direction.North),
-    new Character(100, 20, Monk, Direction.North)
+    new Character("Monk"),
+    new Character("Monk"),
+    new Character("Warrior"),
+    new Character("Monk"),
+    new Character("Ranger"),
+    new Character("Ranger"),
+    new Character("Mage"),
+    new Character("Monk")
   )
 
   val game = new Game(Array(testPlayer, testPlayer2), onDamageCaused)
@@ -150,27 +153,35 @@ class GameScreen extends BaseScreen {
   }
 
   def selectNextPlayerCharacter(): Unit = {
-    val characterList = game.playerList(game.currentPlayer).characters
-    selectedCharacter = selectedCharacter.map(characterList.indexOf).getOrElse(-1) match {
-      case -1 => characterList.headOption
-      case i => characterList.lift((i + 1) % characterList.length)
+    if (game.currentPlayerType == Human) {
+      val characterList = game.playerList(game.currentPlayer).characters
+      selectedCharacter = selectedCharacter.map(characterList.indexOf).getOrElse(-1) match {
+        case -1 => characterList.filter(_.movementPoints > 0).headOption
+        // move the currently selected character to the end of the list and pick the first character with points remaining
+        case i => (characterList.drop(i + 1) ++ characterList.take(i + 1)).filter(_.movementPoints > 0).headOption
+      }
     }
   }
 
   def stopCharacterMovement(): Unit = {
-    selectedCharacter.foreach(character => {
-      if (game.characterPlayer(character) == game.currentPlayer) {
-      character.clearPath()
-      }
-    })
+    if (game.currentPlayerType == Human) {
+      selectedCharacter.foreach(character => {
+        if (game.characterPlayer(character) == game.currentPlayer) {
+          character.clearPath()
+        }
+      })
+    }
   }
 
   def skipSelectedCharacterTurn(): Unit = {
-    selectedCharacter.foreach(character => {
-      if (game.characterPlayer(character) == game.currentPlayer) {
-      character.endTurn()
-      }
-    })
+    if (game.currentPlayerType == Human) {
+      selectedCharacter.foreach(character => {
+        if (game.characterPlayer(character) == game.currentPlayer) {
+          character.endTurn()
+          selectNextPlayerCharacter()
+        }
+      })
+    }
   }
 
   def drawGameMap(canvas: Canvas): Unit = {
@@ -249,7 +260,7 @@ class GameScreen extends BaseScreen {
         context.strokeRect(position.x, position.y, Tile.Size, Tile.Size)
         context.globalAlpha = 1.0
       }
-      context.drawImage(GameScreen.CharacterImageMap(character.charType),
+      context.drawImage(GameScreen.CharacterImageMap(character.characterClass.name),
         character.frame * Tile.Size, character.direction.id * GameScreen.CharacterHeight, Tile.Size, GameScreen.CharacterHeight,
         position.x, position.y, Tile.Size, Tile.Size
         )
@@ -355,8 +366,10 @@ class GameScreen extends BaseScreen {
   def drawProjectiles(canvas: Canvas): Unit = {
     val context = canvas.getGraphicsContext2D
     game.projectiles.foreach(projectile => {
-      val rotatedImage = UIUtils.rotateImage(GameScreen.ProjectileImage, projectile.angle)
-      context.drawImage(rotatedImage, projectile.position.x, projectile.position.y)
+      GameScreen.CharacterProjectileMap.get(projectile.attacker.characterClass.toString).foreach(projectileImage => {
+        val rotatedImage = UIUtils.rotateImage(projectileImage, projectile.angle)
+        context.drawImage(rotatedImage, projectile.position.x, projectile.position.y)
+      })
     })
   }
 
@@ -366,13 +379,13 @@ class GameScreen extends BaseScreen {
 }
 
 object GameScreen {
-  val ProjectileImage = new Image("file:img/arrow.png")
+  val CharacterImageMap = (CharacterClass.Values.map(
+    characterClass => characterClass.name -> new Image(f"file:img/${characterClass.image}"))
+  ).toMap
 
-  val CharacterImageMap = scala.collection.immutable.Map[CharacterType, Image](
-    Warrior -> new Image("file:img/warrior.png"),
-    Monk -> new Image("file:img/monk.png"),
-    Ranger -> new Image("file:img/ranger.png")
-    )
+  val CharacterProjectileMap = (CharacterClass.Values.collect {
+    case key if key.projectile.isDefined => key.name -> new Image(f"file:img/${key.projectile.get}")
+  }).toMap
 
   val PlayerColors = Array(Blue, Red, Green, Yellow)
 

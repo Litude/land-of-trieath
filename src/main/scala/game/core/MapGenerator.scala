@@ -5,7 +5,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
 
 object MapGenerator {
-  val MapObjects = MapObject.readFromFile("definitions/map_objects.json").filter(!_.randomDisallowed)
+  val MapObjects = MapObject.mapGeneratorObjects
   val ObjectPlacementRatio = 4
   val SpawnWidth = 12
   val SpawnHeight = 6
@@ -58,9 +58,9 @@ object MapGenerator {
 
   private def generatePlayerPositions(numPlayers: Int): Seq[Direction] = {
     if (numPlayers != 2) {
-      Random.shuffle(Direction.values).take(numPlayers)
+      Random.shuffle(Direction.Values).take(numPlayers)
     } else {
-      val direction = Direction.values(Random.nextInt(Direction.NumDirections))
+      val direction = Direction.Values(Random.nextInt(Direction.NumDirections))
       Seq(direction, direction.opposite)
     }
   }

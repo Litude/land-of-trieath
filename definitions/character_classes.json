@@ -1,0 +1,61 @@
+[
+    {
+        "name": "Warrior",
+        "attackPower": 17,
+        "defensePower": 10,
+        "movementPoints": 12,
+        "hitpoints": 80,
+        "image": "warrior.png"
+    },
+    {
+        "name": "Monk",
+        "attackPower": 24,
+        "defensePower": 6,
+        "movementPoints": 14,
+        "hitpoints": 92,
+        "image": "monk.png",
+        "attackBonus": {
+            "Ranger": 1.2
+        }
+    },
+    {
+        "name": "Ranger",
+        "attackPower": 15,
+        "defensePower": 8,
+        "movementPoints": 10,
+        "hitpoints": 60,
+        "image": "ranger.png",
+        "range": 10,
+        "meleePenalty": 0.5,
+        "projectile": "arrow.png",
+        "attackBonus": {
+            "Warrior": 1.25
+        }
+    },
+    {
+        "name": "Ninja",
+        "attackPower": 18,
+        "defensePower": 6,
+        "movementPoints": 20,
+        "hitpoints": 74,
+        "image": "ninja.png",
+        "attackBonus": {
+            "Mage": 2.0
+        }
+    },
+    {
+        "name": "Mage",
+        "attackPower": 18,
+        "defensePower": 8,
+        "movementPoints": 11,
+        "hitpoints": 50,
+        "image": "mage.png",
+        "range": 8,
+        "meleePenalty": 0.75,
+        "projectile": "magic_arrow.png",
+        "attackBonus": {
+            "Monk": 1.25
+        }
+    }
+
+]

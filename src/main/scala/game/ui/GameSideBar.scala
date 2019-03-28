@@ -132,9 +132,9 @@ class GameSideBar(width: Int, stop: () => Unit, next: () => Unit, skip: () => Un
     columnConstraints = Seq(col1)
 
     def update(character: Character, player: Int): Unit = {
-      characterImage.image = GameScreen.CharacterImageMap(character.charType)
+      characterImage.image = GameScreen.CharacterImageMap(character.characterClass.toString)
       characterStack.style = f"-fx-border-color: ${UIUtils.colorToWebString(GameScreen.PlayerColors(player))}"
-      textCharacterClass.text = f"Class: ${character.charType}"
+      textCharacterClass.text = f"Class: ${character.characterClass}"
       textCharacterTeam.text = f"Team: Player ${player + 1}"
     }
   }
