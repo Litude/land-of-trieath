@@ -3,8 +3,8 @@ package game.ui
 import scalafx.Includes._
 import scalafx.beans.property._
 import scalafx.geometry._
-import scalafx.geometry.Rectangle2D
 import scalafx.scene.control.Button
+import scalafx.scene.control.ButtonType
 import scalafx.scene.image._
 import scalafx.scene.layout._
 import scalafx.scene.paint.Color
@@ -12,13 +12,17 @@ import scalafx.scene.paint.Color._
 import scalafx.scene.shape.Rectangle
 import scalafx.scene.text._
 import scalafx.scene.control.ProgressBar
+import scalafx.scene.control.Alert
+import scalafx.scene.control.Alert._
 
 import game.core.Character
-import game.core.Human
+import game.core.PlayerType
 import game.core.Game
 import game.core.Direction
 
-class GameSideBar(width: Int, stop: () => Unit, next: () => Unit, skip: () => Unit, endTurn: () => Unit) extends VBox(GameSideBar.DefaultPadding) {
+class GameSideBar(
+    width: Int, stop: () => Unit, next: () => Unit, skip: () => Unit, endTurn: () => Unit, quit: () => Unit
+  ) extends VBox(GameSideBar.DefaultPadding) {
 
   background = new Background(Array(new BackgroundFill(Black, CornerRadii.Empty, Insets.Empty)))
   val menuSpacer = Rectangle(width, 1, Black)
@@ -74,11 +78,8 @@ class GameSideBar(width: Int, stop: () => Unit, next: () => Unit, skip: () => Un
 
   hgrow = Priority.Never
 
-  def updateCurrentPlayerText(currentPlayer: Int): Unit = {
-    textCurrentPlayer.text = f"Current Turn:\nPlayer ${currentPlayer + 1}"
-  }
-
-  def updateCharacterUI(game: Game, selectedCharacter: Option[Character], characterPlayer: Option[Int]): Unit = {
+  def update(game: Game, selectedCharacter: Option[Character], characterPlayer: Option[Int]): Unit = {
+    textCurrentPlayer.text = f"Current Turn:\nPlayer ${game.currentPlayer + 1}"
     buttonGrid.update(selectedCharacter, game)
     (selectedCharacter, characterPlayer) match {
       case (Some(character), Some(player)) => {
@@ -220,15 +221,26 @@ class GameSideBar(width: Int, stop: () => Unit, next: () => Unit, skip: () => Un
     buttonEndTurn.disable = true
     buttonEndTurn.onAction = endTurn
 
+    val buttonQuit = new Button("Quit")
+    buttonQuit.onAction = () => {
+      val dialog = new Alert(AlertType.Confirmation, "Do you really want to quit?")
+      dialog.showAndWait match {
+        case Some(result) if (result == ButtonType.OK) => quit()
+        case _ =>
+      }
+    }
+
     buttonStop.maxWidth = GameSideBar.ButtonWidth
     buttonNext.maxWidth = GameSideBar.ButtonWidth
     buttonSkip.maxWidth = GameSideBar.ButtonWidth
     buttonEndTurn.maxWidth = GameSideBar.ButtonWidth
+    buttonQuit.maxWidth = GameSideBar.ButtonWidth
 
     add(buttonStop, 0, 0)
     add(buttonNext, 1, 0)
     add(buttonSkip, 0, 1)
     add(buttonEndTurn, 1, 1)
+    add(buttonQuit, 0, 2, 2, 1)
 
     vgap = 16.0
 
@@ -242,10 +254,10 @@ class GameSideBar(width: Int, stop: () => Unit, next: () => Unit, skip: () => Un
     columnConstraints = Seq(colSpecs, colSpecs)
 
     def update(selectedCharacter: Option[Character], game: Game): Unit = {
-      if (game.currentPlayerType == Human) {
+      if (game.currentPlayerType == PlayerType.Human) {
         buttonEndTurn.disable = !game.actionsAllowed
         selectedCharacter match {
-          case Some(character) if (game.characterPlayer(character) == game.currentPlayer) => {
+          case Some(character) if (game.characterPlayer(character) == game.currentPlayer && !game.isPaused) => {
           buttonStop.disable = !character.isMoving
           buttonNext.disable = false
           buttonSkip.disable = character.movementPoints == 0 || character.isMoving

@@ -35,11 +35,14 @@ case class Coordinate(val x: Int, val y: Int) {
 
   def vectorLength: Double = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2))
 
+  def worldToTile: Coordinate = Coordinate(this.x / Tile.Size, this.y / Tile.Size)
+
   def +(that: Coordinate): Coordinate = Coordinate(this.x + that.x, this.y + that.y)
   def +(that: Direction): Coordinate = this + Coordinate.fromDirection(that)
   def -(that: Coordinate): Coordinate = Coordinate(this.x - that.x, this.y - that.y)
   def -(that: Direction): Coordinate = this - Coordinate.fromDirection(that)
   def *(multiplier: Int): Coordinate = Coordinate(this.x * multiplier, this.y * multiplier)
+  def unary_- : Coordinate = this * -1
 }
 
 case object Coordinate {

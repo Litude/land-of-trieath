@@ -63,7 +63,7 @@ class Character(charType: String) {
     _shouldUpdateReachable = false
   }
 
-  def frame: Int = _walkingOffset / 5
+  def frame: Int = if (_walkingOffset == 0) 1 else _walkingOffset / 5
 
   def movementPoints: Int = _movementPoints
 

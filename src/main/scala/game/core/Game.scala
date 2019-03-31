@@ -10,17 +10,18 @@ object MovementResult extends Enumeration {
   val Failed, Moving, Attacking = Value
 }
 
-class Game(val playerList: Array[Player], val onDamageCaused: (Int, Coordinate) => Unit) {
+class Game(val playerList: Seq[Player], val onDamageCaused: (Int, Coordinate) => Unit, val onTurnEnded: () => Unit) {
   val map = MapGenerator.generateMap(Map.TestMapSize, Map.TestMapSize, playerList.length)
   val pathFinder: PathFinder = DjikstraFinder
   val walkableTileFinder: WalkableTileFinder = DjikstraFinder
   var characterIsMoving = false
+  var isPaused = false
   var currentPlayer = 0
   var projectiles = ArrayBuffer[Projectile]()
 
   val pendingPathRequests = new AtomicInteger(0)
 
-  val stuff = playerList.zip(map.spawns).foreach({case (player, spawnList) => {
+  playerList.zip(map.spawns).foreach({case (player, spawnList) => {
     player.characters.zip(spawnList).foreach({case (character, spawn) => {
       character.position = spawn.position
       character.direction = spawn.direction
@@ -84,12 +85,14 @@ class Game(val playerList: Array[Player], val onDamageCaused: (Int, Coordinate) 
   }
 
   def updateGameState(): Unit = {
-    val movingCharacters = playerList.flatMap(_.characters).filter(_.isMoving)
-    movingCharacters.foreach(updateMovingCharacter)
-    removeDeadCharacters()
-    updateProjectiles()
-    characterIsMoving = !movingCharacters.isEmpty
-    updateAIPlayer()
+    if (!isPaused) {
+      val movingCharacters = playerList.flatMap(_.characters).filter(_.isMoving)
+      movingCharacters.foreach(updateMovingCharacter)
+      removeDeadCharacters()
+      updateProjectiles()
+      characterIsMoving = !movingCharacters.isEmpty
+      updateAIPlayer()
+    }
   }
 
   //ends the turn and moves to the next player
@@ -101,13 +104,14 @@ class Game(val playerList: Array[Player], val onDamageCaused: (Int, Coordinate) 
       } while (!playerList(currentPlayer).isAlive)
       playerList(currentPlayer).characters.foreach(_.restoreMovementPoints())
       markAllCharacterReachablesDirty()
+      onTurnEnded()
       true
     } else {
       false
     }
   }
 
-  def actionsAllowed: Boolean = !characterIsMoving && pendingPathRequests.get == 0 && projectiles.length == 0
+  def actionsAllowed: Boolean = !isPaused && !characterIsMoving && pendingPathRequests.get == 0 && projectiles.length == 0
 
   //Returns player of character, or -1 if the character belongs to no player (should probably never happen)
   def characterPlayer(character: Character): Int = {
@@ -115,6 +119,11 @@ class Game(val playerList: Array[Player], val onDamageCaused: (Int, Coordinate) 
   }
 
   def currentPlayerType: PlayerType = playerList(currentPlayer).playerType
+
+  def isOver: Option[Int] = {
+    val playersAlive = playerList.filter(_.isAlive)
+    if (playersAlive.length == 1) Some(playerList.indexOf(playersAlive.head)) else None
+  }
 
   private def tileIsWalkable(position: Coordinate, character: Character): Boolean = {
     !map(position.x, position.y).isSolid && !playerList.flatMap(_.characters).filter(_ != character).exists(character => character.position == position)

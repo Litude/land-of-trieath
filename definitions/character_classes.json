@@ -1,7 +1,7 @@
 [
     {
         "name": "Warrior",
-        "attackPower": 17,
+        "attackPower": 23,
         "defensePower": 10,
         "movementPoints": 12,
         "hitpoints": 80,
@@ -9,7 +9,7 @@
     },
     {
         "name": "Monk",
-        "attackPower": 24,
+        "attackPower": 26,
         "defensePower": 6,
         "movementPoints": 14,
         "hitpoints": 92,
@@ -20,7 +20,7 @@
     },
     {
         "name": "Ranger",
-        "attackPower": 15,
+        "attackPower": 19,
         "defensePower": 8,
         "movementPoints": 10,
         "hitpoints": 60,
@@ -34,7 +34,7 @@
     },
     {
         "name": "Ninja",
-        "attackPower": 18,
+        "attackPower": 21,
         "defensePower": 6,
         "movementPoints": 20,
         "hitpoints": 74,
@@ -45,7 +45,7 @@
     },
     {
         "name": "Mage",
-        "attackPower": 18,
+        "attackPower": 22,
         "defensePower": 8,
         "movementPoints": 11,
         "hitpoints": 50,

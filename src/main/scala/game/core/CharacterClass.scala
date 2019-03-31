@@ -19,7 +19,6 @@ case class CharacterClass(
     val attackBonus: scala.collection.immutable.Map[String, Double]) {
 
   override def toString: String = name
-
 }
 
 object CharacterClass {

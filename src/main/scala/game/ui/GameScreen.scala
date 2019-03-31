@@ -3,7 +3,6 @@ package game.ui
 import scalafx.Includes._
 import scalafx.animation._
 import scalafx.beans.property._
-import scalafx.geometry.Point2D
 import scalafx.scene.canvas._
 import scalafx.scene.image._
 import scalafx.scene.input._
@@ -13,12 +12,16 @@ import scalafx.util.Duration
 
 import game.core._
 
-class GameScreen extends BaseScreen {
+object GameResult extends Enumeration {
+  val Victory, Defeat, Quit = Value
+}
+
+class GameScreen(callback: (GameResult.Value) => Unit) extends BaseScreen {
 
   var selectedCharacter: Option[Character] = None
   var hoveredTile = Coordinate(0 ,0)
 
-  var camOffset = Coordinate(0, 0)
+  var _camOffset = Coordinate(0, 0)
   var centerPosition = Coordinate(0, 0)
   var mousePosition = Coordinate(0, 0)
   val tileEffects = new TileEffects()
@@ -26,6 +29,14 @@ class GameScreen extends BaseScreen {
   var showDebugInfo = false
 
   fill = Black
+
+  def camOffset_=(offset: Coordinate): Unit = {
+    _camOffset = offset
+    clipCameraToBounds()
+    translateScene()
+  }
+
+  def camOffset: Coordinate = _camOffset
 
   //add some test data
   val testPlayer = new HumanPlayer("tester")
@@ -53,59 +64,68 @@ class GameScreen extends BaseScreen {
     new Character("Monk")
   )
 
-  val game = new Game(Array(testPlayer, testPlayer2), onDamageCaused)
+  val game = new Game(
+    Seq(testPlayer, testPlayer2),
+    onDamageCaused,
+    () => onTurnEnded)
+
+  val cameraOffsets = Array.tabulate(game.playerList.length)(
+    game.playerList(_).characters.headOption.map(cameraOffsetToCharacter).getOrElse(Coordinate(0, 0))
+  )
 
   val backgroundCanvas = new Canvas(game.map.width * Tile.Size, game.map.height * Tile.Size)
   val foregroundCanvas = new Canvas(game.map.width * Tile.Size, game.map.height * Tile.Size)
+  val overlay = new Overlay
+  overlay.minWidth.bind(width - GameScreen.MenuWidth)
+  overlay.minHeight.bind(height)
+  overlay.visible = false
   drawGameMap(backgroundCanvas)
 
   val mapPane = new Pane
-  mapPane.children = Array(backgroundCanvas, foregroundCanvas)
+  mapPane.children = Array(backgroundCanvas, foregroundCanvas, overlay)
   mapPane.hgrow = Priority.Always
 
-  val menu = new GameSideBar(
+  val sideBar = new GameSideBar(
     GameScreen.MenuWidth,
     () => stopCharacterMovement(),
     () => selectNextPlayerCharacter(),
     () => skipSelectedCharacterTurn(),
-    () => endTurn()
+    () => endTurn(),
+    () => onResult(GameResult.Quit)
   )
 
   val layout = new HBox
-  layout.children = Array(mapPane, menu)
+  layout.children = Array(mapPane, sideBar)
   content = layout
+  layout.minWidth.bind(width)
 
   val gameLoop = new Timeline {
     keyFrames = Seq(
       KeyFrame(Duration(GameScreen.TickDelay), onFinished = () => {
         game.updateGameState()
         deselectDeadCharacter()
-        menu.updateCurrentPlayerText(game.currentPlayer)
-        menu.updateCharacterUI(game, selectedCharacter, selectedCharacter.map(game.characterPlayer))
-        clearCanvas(foregroundCanvas)
-        if (showDebugInfo) drawDebugInfo(foregroundCanvas)
-        highlightHoveredTile(foregroundCanvas)
-        updateReachableTiles(foregroundCanvas)
-        drawGameCharacters(foregroundCanvas)
-        drawSelectedCharacterDetails(foregroundCanvas)
-        drawProjectiles(foregroundCanvas)
-        drawScreenEffects(foregroundCanvas, GameScreen.TickDelay)
+        tileEffects.update(GameScreen.TickDelay)
+        updateReachableTiles()
+        sideBar.update(game, selectedCharacter, selectedCharacter.map(game.characterPlayer))
+        drawGame(foregroundCanvas)
+        isGameOver()
       })
     )
     cycleCount = Timeline.Indefinite
   }
   gameLoop.play()
+  onTurnEnded()
 
   mapPane.onMouseClicked = mouseEvent => {
     if (backgroundCanvas.contains(backgroundCanvas.parentToLocal(mouseEvent.sceneX, mouseEvent.sceneY))) {
       val worldCoords = backgroundCanvas.parentToLocal(mouseEvent.sceneX, mouseEvent.sceneY)
-      val tileCoords = worldToTile(worldCoords)
+      val tileCoords = Coordinate(worldCoords.x.toInt, worldCoords.y.toInt).worldToTile
 
       mouseEvent.button match {
         case MouseButton.Primary => {
           selectedCharacter = game.playerList.flatMap(_.characters).find(_.occupiesPoint(Coordinate(worldCoords.x.toInt, worldCoords.y.toInt)))
         }
-        case MouseButton.Secondary if game.currentPlayerType == Human => {
+        case MouseButton.Secondary if game.currentPlayerType == PlayerType.Human => {
           selectedCharacter.foreach(character => {
             if (game.moveCharacter(character, tileCoords) == MovementResult.Attacking) {
               this.tileEffects += new HighlightEffect(tileCoords)
@@ -127,8 +147,6 @@ class GameScreen extends BaseScreen {
     if (mouseEvent.button == MouseButton.Middle) {
       camOffset = Coordinate(camOffset.x + (mouseEvent.sceneX.toInt - mousePosition.x), camOffset.y + (mouseEvent.sceneY.toInt - mousePosition.y))
       mousePosition = Coordinate(mouseEvent.sceneX.toInt, mouseEvent.sceneY.toInt)
-      clipCameraToBounds()
-      translateScene()
     }
   }
 
@@ -143,17 +161,15 @@ class GameScreen extends BaseScreen {
       case KeyCode.Tab => selectNextPlayerCharacter()
       case _ =>
     }
-    clipCameraToBounds()
-    translateScene()
   }
 
   mapPane.onMouseMoved = mouseEvent => {
     val mapPoint = backgroundCanvas.parentToLocal(mouseEvent.sceneX, mouseEvent.sceneY)
-    hoveredTile = worldToTile(Coordinate(mapPoint.x.toInt, mapPoint.y.toInt))
+    hoveredTile = Coordinate(mapPoint.x.toInt, mapPoint.y.toInt).worldToTile
   }
 
   def selectNextPlayerCharacter(): Unit = {
-    if (game.currentPlayerType == Human) {
+    if (!game.isPaused && game.currentPlayerType == PlayerType.Human) {
       val characterList = game.playerList(game.currentPlayer).characters
       selectedCharacter = selectedCharacter.map(characterList.indexOf).getOrElse(-1) match {
         case -1 => characterList.filter(_.movementPoints > 0).headOption
@@ -164,7 +180,7 @@ class GameScreen extends BaseScreen {
   }
 
   def stopCharacterMovement(): Unit = {
-    if (game.currentPlayerType == Human) {
+    if (!game.isPaused && game.currentPlayerType == PlayerType.Human) {
       selectedCharacter.foreach(character => {
         if (game.characterPlayer(character) == game.currentPlayer) {
           character.clearPath()
@@ -174,7 +190,7 @@ class GameScreen extends BaseScreen {
   }
 
   def skipSelectedCharacterTurn(): Unit = {
-    if (game.currentPlayerType == Human) {
+    if (!game.isPaused && game.currentPlayerType == PlayerType.Human) {
       selectedCharacter.foreach(character => {
         if (game.characterPlayer(character) == game.currentPlayer) {
           character.endTurn()
@@ -182,6 +198,130 @@ class GameScreen extends BaseScreen {
         }
       })
     }
+  }
+
+  def endTurn(): Unit = {
+    if (game.currentPlayerType == PlayerType.Human) {
+      cameraOffsets(game.currentPlayer) = camOffset
+    }
+    game.endTurn()
+  }
+
+
+  def onDamageCaused(damage: Int, position: Coordinate): Unit = {
+    this.tileEffects += new DamageCounter(damage, position)
+  }
+
+  def onTurnEnded(): Unit = {
+    selectedCharacter = None
+    game.isPaused = true
+    showOverlay(f"Player ${game.currentPlayer + 1} Turn", () => {
+      if (game.currentPlayerType == PlayerType.Human) {
+        camOffset = cameraOffsets(game.currentPlayer)
+      } else {
+        camOffset = game.playerList(game.currentPlayer).characters.headOption.map(cameraOffsetToCharacter).getOrElse(Coordinate(0, 0))
+      }
+    })
+  }
+
+  def cameraOffsetToCharacter(character: Character): Coordinate = {
+    Coordinate(
+      (character.position.x - game.map.width / 2) * Tile.Size * -1,
+      (character.position.y - game.map.height / 2) * Tile.Size * -1
+    )
+  }
+
+  def deselectDeadCharacter(): Unit = {
+    selectedCharacter = if (selectedCharacter.map(_.isDead).getOrElse(false)) None else selectedCharacter
+  }
+
+  def updateReachableTiles(): Unit = {
+    if (game.currentPlayerType == PlayerType.Human) {
+      selectedCharacter.foreach(character => {
+        game.updateReachableCharacterTiles(character)
+      })
+    }
+  }
+
+  def isGameOver(): Unit = {
+    game.isOver match {
+      case Some(victor) if (victor == GameScreen.LocalPlayer) => showOverlay("Victory!", "You have defeated the enemy", () => onResult(GameResult.Victory))
+      case Some(victor) => showOverlay("Defeat!", "You have been defeated", () => onResult(GameResult.Defeat))
+      case _ =>
+    }
+  }
+
+
+  def clipCameraToBounds(): Unit = {
+    _camOffset = Coordinate(
+      Math.max(Math.min(_camOffset.x, -centerPosition.x), centerPosition.x - GameScreen.MenuWidth),
+      Math.max(Math.min(_camOffset.y, -centerPosition.y), centerPosition.y)
+      )
+    if (width.get.toInt - GameScreen.MenuWidth > game.map.width * Tile.Size) {
+      _camOffset = Coordinate(-GameScreen.MenuWidth / 2, _camOffset.y)
+    }
+    if (height.get.toInt > game.map.height * Tile.Size) {
+      _camOffset = Coordinate(_camOffset.x, 0)
+    }
+  }
+
+  def onResize(): Unit = {
+    centerPosition = Coordinate((width.get.toInt - game.map.width * Tile.Size) / 2, (height.get.toInt - game.map.height * Tile.Size) / 2)
+    clipCameraToBounds()
+    translateScene()
+    mapPane.setMinWidth(width.get - GameScreen.MenuWidth)
+    mapPane.setMaxWidth(width.get - GameScreen.MenuWidth)
+  }
+
+  def onResult(result: GameResult.Value): Unit = {
+    gameLoop.stop()
+    callback(result)
+  }
+
+  def translateScene(): Unit = {
+    Array(backgroundCanvas, foregroundCanvas).foreach(canvas => {
+      canvas.translateX = camOffset.x + centerPosition.x
+      canvas.translateY = camOffset.y + centerPosition.y
+    })
+  }
+
+  def drawGame(canvas: Canvas): Unit = {
+    clearCanvas(canvas)
+    if (showDebugInfo) drawDebugInfo(canvas)
+    highlightHoveredTile(canvas)
+    drawReachableTiles(canvas)
+    drawGameCharacters(canvas)
+    drawSelectedCharacterDetails(canvas)
+    drawProjectiles(canvas)
+    tileEffects.draw(canvas)
+  }
+
+  def clearCanvas(canvas: Canvas): Unit = {
+    val context = canvas.graphicsContext2D
+    context.clearRect(0, 0, canvas.width.get, canvas.height.get)
+  }
+
+  def highlightHoveredTile(canvas: Canvas): Unit = {
+    highlightTiles(canvas, Seq(hoveredTile))
+  }
+
+  def drawReachableTiles(canvas: Canvas): Unit = {
+    if (game.currentPlayerType == PlayerType.Human) {
+      selectedCharacter.foreach(character => {
+        highlightTiles(canvas, character.reachableTiles)
+      })
+    }
+  }
+
+  def highlightTiles(canvas: Canvas, tiles: Seq[Coordinate]): Unit = {
+    val context = canvas.graphicsContext2D
+    context.save()
+    context.fill = Black
+    context.globalAlpha = 0.25
+    tiles.foreach(tile => {
+      context.fillRect(tile.x * Tile.Size, tile.y * Tile.Size, Tile.Size, Tile.Size)
+    })
+    context.restore()
   }
 
   def drawGameMap(canvas: Canvas): Unit = {
@@ -203,12 +343,6 @@ class GameScreen extends BaseScreen {
       val tile = game.map(x, y)
       drawTileOnCanvas(context, groundTiles, tile.groundType, x, y)
       tile.obstacleType.foreach(drawTileOnCanvas(context, obstacleTiles, _, x, y))
-    }
-  }
-
-  def endTurn(): Unit = {
-    if (game.endTurn()) {
-      selectedCharacter = None
     }
   }
 
@@ -235,9 +369,7 @@ class GameScreen extends BaseScreen {
       )
     })
     context.restore()
-
   }
-
 
   def drawGameCharacters(canvas: Canvas): Unit = {
     val context = canvas.graphicsContext2D
@@ -247,7 +379,7 @@ class GameScreen extends BaseScreen {
       val characterPlayer = game.characterPlayer(character)
 
       //draw glow below current human player characters with remaining movement points
-      if (!character.isMoving && game.currentPlayerType == Human && characterPlayer == game.currentPlayer && character.movementPoints > 0) {
+      if (!character.isMoving && game.currentPlayerType == PlayerType.Human && characterPlayer == game.currentPlayer && character.movementPoints > 0) {
         val timeValue = (System.currentTimeMillis % GameScreen.MovementRemainingPeriod).toInt
         val multiplier = if (timeValue < GameScreen.MovementRemainingPeriod / 2) {
           GameScreen.MovementRemainingPeriod / 2 - timeValue
@@ -293,76 +425,6 @@ class GameScreen extends BaseScreen {
     context.restore()
   }
 
-  def highlightHoveredTile(canvas: Canvas): Unit = {
-    highlightTiles(canvas, Seq(hoveredTile))
-  }
-
-  def updateReachableTiles(canvas: Canvas): Unit = {
-    if (game.currentPlayerType == Human) {
-      selectedCharacter.foreach(character => {
-        game.updateReachableCharacterTiles(character)
-        highlightTiles(canvas, character.reachableTiles)
-      })
-    }
-  }
-
-  def highlightTiles(canvas: Canvas, tiles: Seq[Coordinate]): Unit = {
-    val context = canvas.graphicsContext2D
-    context.save()
-    context.fill = Black
-    context.globalAlpha = 0.25
-    tiles.foreach(tile => {
-      context.fillRect(tile.x * Tile.Size, tile.y * Tile.Size, Tile.Size, Tile.Size)
-    })
-    context.restore()
-  }
-
-  def clearCanvas(canvas: Canvas): Unit = {
-    val context = canvas.graphicsContext2D
-    context.clearRect(0, 0, canvas.width.get, canvas.height.get)
-  }
-
-  def clipCameraToBounds(): Unit = {
-    camOffset = Coordinate(
-      Math.max(Math.min(camOffset.x, -centerPosition.x), centerPosition.x - GameScreen.MenuWidth),
-      Math.max(Math.min(camOffset.y, -centerPosition.y), centerPosition.y)
-      )
-    if (width.get.toInt - GameScreen.MenuWidth > game.map.width * Tile.Size) {
-      camOffset = Coordinate(-GameScreen.MenuWidth / 2, camOffset.y)
-    }
-    if (height.get.toInt > game.map.height * Tile.Size) {
-      camOffset = Coordinate(camOffset.x, 0)
-    }
-  }
-
-  def onResize(): Unit = {
-    centerPosition = Coordinate(width.get.toInt / 2 - game.map.width / 2 * Tile.Size, height.get.toInt / 2 - game.map.height / 2 * Tile.Size)
-    clipCameraToBounds()
-    translateScene()
-    mapPane.setMinWidth(width.get - GameScreen.MenuWidth)
-    mapPane.setMaxWidth(width.get - GameScreen.MenuWidth)
-  }
-
-  def worldToTile(world: Point2D): Coordinate = worldToTile(Coordinate(world.x.toInt, world.y.toInt))
-
-  def worldToTile(world: Coordinate): Coordinate = Coordinate(world.x / Tile.Size, world.y / Tile.Size)
-
-  def translateScene(): Unit = {
-    Array(backgroundCanvas, foregroundCanvas).foreach(canvas => {
-      canvas.translateX = camOffset.x + centerPosition.x
-      canvas.translateY = camOffset.y + centerPosition.y
-    })
-  }
-
-  def onDamageCaused(damage: Int, position: Coordinate): Unit = {
-    this.tileEffects += new DamageCounter(damage, position)
-  }
-
-  def drawScreenEffects(canvas: Canvas, delay: Int): Unit = {
-    this.tileEffects.update(delay)
-    this.tileEffects.draw(canvas)
-  }
-
   def drawProjectiles(canvas: Canvas): Unit = {
     val context = canvas.getGraphicsContext2D
     game.projectiles.foreach(projectile => {
@@ -373,12 +435,22 @@ class GameScreen extends BaseScreen {
     })
   }
 
-  def deselectDeadCharacter(): Unit = {
-    selectedCharacter = if (selectedCharacter.map(_.isDead).getOrElse(false)) None else selectedCharacter
+  def showOverlay(title: String, action: () => Unit): Unit = {
+    showOverlay(title, "", action)
+  }
+
+  def showOverlay(title: String, subtitle: String, action: () => Unit): Unit = {
+    game.isPaused = true
+    overlay.show(title, subtitle, () => {
+      action()
+      game.isPaused = false
+      overlay.dismiss()
+    })
   }
 }
 
 object GameScreen {
+  val LocalPlayer = 0
   val CharacterImageMap = (CharacterClass.Values.map(
     characterClass => characterClass.name -> new Image(f"file:img/${characterClass.image}"))
   ).toMap

@@ -6,9 +6,7 @@ trait PlayerAI {
     if (shouldMakeMove(game)) makeMove(game) else false
   }
 
-  def shouldMakeMove(game: Game): Boolean = {
-    !game.characterIsMoving && game.pendingPathRequests.get == 0
-  }
+  def shouldMakeMove(game: Game): Boolean = game.actionsAllowed
 
   def makeMove(game: Game): Boolean
 }
