@@ -30,11 +30,12 @@ class Overlay extends Pane {
   layout.children = Seq(title, subtitle, button)
   children = layout
 
-  def show(titleText: String, subtitleText: String, action: () => Unit): Unit = {
+  def show(titleText: String, subtitleText: String, action: => Unit): Unit = {
     visible = true
     title.text = titleText
     subtitle.text = subtitleText
-    button.onAction = action
+    button.onAction = () => action
+    button.requestFocus()
   }
 
   def dismiss(): Unit = {

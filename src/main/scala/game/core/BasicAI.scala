@@ -7,6 +7,7 @@ import scala.util.{Success, Failure}
 
 class BasicAI extends PlayerAI {
 
+  var previousMoveTime: Long = 0
   val calculating = new AtomicBoolean(false)
 
   override def makeMove(game: Game): Boolean = {
@@ -30,6 +31,7 @@ class BasicAI extends PlayerAI {
             }
           }.onComplete {
             case Success(result) => {
+              previousMoveTime = System.currentTimeMillis
               calculating.set(false)
             }
             case Failure(t) => {
@@ -43,7 +45,8 @@ class BasicAI extends PlayerAI {
         }
         false
       } else {
-      true
+        previousMoveTime = System.currentTimeMillis
+        true
       }
     } else {
       false

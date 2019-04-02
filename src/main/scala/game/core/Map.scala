@@ -19,8 +19,4 @@ class Map(val width: Int, val height: Int) {
   def update(x: Int, y: Int, tile: Tile): Unit = tiles(x)(y) = tile
 }
 
-object Map {
-  val TestMapSize = 30
-}
-
 case class CharacterSpawn(position: Coordinate, direction: Direction)

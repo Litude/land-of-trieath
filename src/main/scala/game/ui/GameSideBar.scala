@@ -21,7 +21,7 @@ import game.core.Game
 import game.core.Direction
 
 class GameSideBar(
-    width: Int, stop: () => Unit, next: () => Unit, skip: () => Unit, endTurn: () => Unit, quit: () => Unit
+    width: Int, stop: => Unit, next: => Unit, skip: => Unit, endTurn: => Unit, quit: => Unit
   ) extends VBox(GameSideBar.DefaultPadding) {
 
   background = new Background(Array(new BackgroundFill(Black, CornerRadii.Empty, Insets.Empty)))
@@ -210,22 +210,22 @@ class GameSideBar(
   class ButtonGrid(parentWidth: ReadOnlyDoubleProperty) extends GridPane {
     val buttonStop = new Button("Stop")
     buttonStop.disable = true
-    buttonStop.onAction = stop
+    buttonStop.onAction = () => stop
     val buttonNext = new Button("Next")
     buttonNext.disable = true
-    buttonNext.onAction = next
+    buttonNext.onAction = () => next
     val buttonSkip = new Button("Skip")
     buttonSkip.disable = true
-    buttonSkip.onAction = skip
+    buttonSkip.onAction = () => skip
     val buttonEndTurn = new Button("End Turn")
     buttonEndTurn.disable = true
-    buttonEndTurn.onAction = endTurn
+    buttonEndTurn.onAction = () => endTurn
 
     val buttonQuit = new Button("Quit")
     buttonQuit.onAction = () => {
       val dialog = new Alert(AlertType.Confirmation, "Do you really want to quit?")
       dialog.showAndWait match {
-        case Some(result) if (result == ButtonType.OK) => quit()
+        case Some(result) if (result == ButtonType.OK) => quit
         case _ =>
       }
     }
@@ -256,15 +256,14 @@ class GameSideBar(
     def update(selectedCharacter: Option[Character], game: Game): Unit = {
       if (game.currentPlayerType == PlayerType.Human) {
         buttonEndTurn.disable = !game.actionsAllowed
+        buttonNext.disable = game.isPaused || game.playerList(game.currentPlayer).characters.forall(_.movementPoints <= 0)
         selectedCharacter match {
           case Some(character) if (game.characterPlayer(character) == game.currentPlayer && !game.isPaused) => {
           buttonStop.disable = !character.isMoving
-          buttonNext.disable = false
           buttonSkip.disable = character.movementPoints == 0 || character.isMoving
           }
           case _ => {
             buttonStop.disable = true
-            buttonNext.disable = true
             buttonSkip.disable = true
           }
         }

@@ -1,0 +1,58 @@
+{
+    "name": "Test Campaign",
+    "playerCharacters": [
+        {
+            "class": "Warrior"
+        },
+        {
+            "class": "Monk"
+        },
+        {
+            "class": "Ranger"
+        },
+        {
+            "class": "Monk"
+        }
+    ],
+    "missions": [
+        {
+            "type": "random",
+            "width": 20,
+            "height": 20,
+            "enemies": [
+                [
+                    {
+                        "class": "Warrior"
+                    },
+                    {
+                        "class": "Warrior"
+                    },
+                    {
+                        "class": "Mage"
+                    }
+                ]
+            ]
+        },
+        {
+            "type": "random",
+            "width": 30,
+            "height": 30,
+            "enemies": [
+                [
+                    {
+                        "class": "Ranger"
+                    },
+                    {
+                        "class": "Warrior"
+                    },
+                    {
+                        "class": "Mage"
+                    },
+                    {
+                        "class": "Ninja"
+                    }
+                ]
+            ]
+        }
+    ]
+}

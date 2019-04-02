@@ -43,8 +43,6 @@ class MenuScreen(callback: (MenuResult.Value) => Unit) extends BaseScreen {
   layout.children = Seq(title, newGame, exit)
 
   content = layout
-
-  override def onResize(): Unit = {}
 }
 
 object MenuScreen {

@@ -3,27 +3,34 @@ package game.core
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
 
+import play.api.libs.json._
+import play.api.libs.json.Reads._
+import play.api.libs.functional.syntax._
+
 class Character(charType: String) {
 
   val characterClass = CharacterClass.get(charType)
   var direction: Direction = Direction.North
+
+  var hitpoints = maxHitPoints
+  var position = Coordinate(0, 0)
+  var attackTarget: Option[Character] = None
+
+  private var _walkingOffset = 0
+  private var _movementPoints = maxMovementPoints
+
+  private var _reachableTiles = Seq[Coordinate]()
+  private var _shouldUpdateReachable = true
+  private var _walkingPath: Option[ArrayBuffer[Coordinate]] = None
+
+  //This is a "VERY" lazy copy, since at least for now all other fields can be set to their defaults when copying
+  def copy: Character = new Character(this.characterClass.name)
 
   def maxHitPoints: Int = characterClass.hitpoints
   def maxMovementPoints: Int = characterClass.movementPoints
   def attackPower: Int = characterClass.attackPower
   def defensePower: Int = characterClass.defensePower
   def range: Int = characterClass.range
-
-  private var _walkingOffset = 0
-  private var _movementPoints = maxMovementPoints
-
-  var hitpoints = maxHitPoints
-  var position = Coordinate(0, 0)
-  var attackTarget: Option[Character] = None
-
-  private var _reachableTiles = Seq[Coordinate]()
-  private var _shouldUpdateReachable = true
-  private var _walkingPath: Option[ArrayBuffer[Coordinate]] = None
 
   def drawingPosition: Coordinate = {
     val walkOffset = Coordinate.fromDirection(direction) * walkingOffset * 2
@@ -76,6 +83,10 @@ class Character(charType: String) {
 
   def restoreMovementPoints(): Unit = {
     _movementPoints = maxMovementPoints
+  }
+
+  def restoreHitPoints(): Unit = {
+    hitpoints = maxHitPoints
   }
 
   // returns true if we stop moving, false otherwise
@@ -152,6 +163,12 @@ class Character(charType: String) {
 }
 
 object Character {
+
+  def apply(characterClass: String): Character = new Character(characterClass)
+
+  implicit val objectFromJson: Reads[Character] =
+    (JsPath \ "class").read[String].map(Character(_))
+
   val AttackRandomFraction = 10.0
   val MaxWalkOffset = Tile.Size / 2 - 1
 }

@@ -1,5 +1,7 @@
 package game.ui
 
+import scala.collection.mutable.ArrayBuffer
+
 import scalafx.Includes._
 import scalafx.animation._
 import scalafx.beans.property._
@@ -16,7 +18,7 @@ object GameResult extends Enumeration {
   val Victory, Defeat, Quit = Value
 }
 
-class GameScreen(callback: (GameResult.Value) => Unit) extends BaseScreen {
+class GameScreen(game: Game, callback: (GameResult.Value, ArrayBuffer[Character]) => Unit) extends BaseScreen {
 
   var selectedCharacter: Option[Character] = None
   var hoveredTile = Coordinate(0 ,0)
@@ -38,36 +40,8 @@ class GameScreen(callback: (GameResult.Value) => Unit) extends BaseScreen {
 
   def camOffset: Coordinate = _camOffset
 
-  //add some test data
-  val testPlayer = new HumanPlayer("tester")
-  testPlayer.characters ++= Seq(
-    new Character("Warrior"),
-    new Character("Monk"),
-    new Character("Ranger"),
-    new Character("Monk"),
-    new Character("Warrior"),
-    new Character("Warrior"),
-    new Character("Ninja"),
-    new Character("Mage"),
-    new Character("Ranger")
-  )
-
-  val testPlayer2 = new AIPlayer("other", new BasicAI)
-  testPlayer2.characters ++= Seq(
-    new Character("Monk"),
-    new Character("Monk"),
-    new Character("Warrior"),
-    new Character("Monk"),
-    new Character("Ranger"),
-    new Character("Ranger"),
-    new Character("Mage"),
-    new Character("Monk")
-  )
-
-  val game = new Game(
-    Seq(testPlayer, testPlayer2),
-    onDamageCaused,
-    () => onTurnEnded)
+  game.onDamageCaused = onDamageCaused
+  game.onTurnEnded = () => onTurnEnded
 
   val cameraOffsets = Array.tabulate(game.playerList.length)(
     game.playerList(_).characters.headOption.map(cameraOffsetToCharacter).getOrElse(Coordinate(0, 0))
@@ -87,11 +61,11 @@ class GameScreen(callback: (GameResult.Value) => Unit) extends BaseScreen {
 
   val sideBar = new GameSideBar(
     GameScreen.MenuWidth,
-    () => stopCharacterMovement(),
-    () => selectNextPlayerCharacter(),
-    () => skipSelectedCharacterTurn(),
-    () => endTurn(),
-    () => onResult(GameResult.Quit)
+    stopCharacterMovement(),
+    selectNextPlayerCharacter(),
+    skipSelectedCharacterTurn(),
+    endTurn(),
+    onResult(GameResult.Quit)
   )
 
   val layout = new HBox
@@ -123,7 +97,9 @@ class GameScreen(callback: (GameResult.Value) => Unit) extends BaseScreen {
 
       mouseEvent.button match {
         case MouseButton.Primary => {
-          selectedCharacter = game.playerList.flatMap(_.characters).find(_.occupiesPoint(Coordinate(worldCoords.x.toInt, worldCoords.y.toInt)))
+          if (!overlay.visible.get) {
+            selectedCharacter = game.playerList.flatMap(_.characters).find(_.occupiesPoint(Coordinate(worldCoords.x.toInt, worldCoords.y.toInt)))
+          }
         }
         case MouseButton.Secondary if game.currentPlayerType == PlayerType.Human => {
           selectedCharacter.foreach(character => {
@@ -215,7 +191,7 @@ class GameScreen(callback: (GameResult.Value) => Unit) extends BaseScreen {
   def onTurnEnded(): Unit = {
     selectedCharacter = None
     game.isPaused = true
-    showOverlay(f"Player ${game.currentPlayer + 1} Turn", () => {
+    showOverlay(f"Player ${game.currentPlayer + 1} Turn", {
       if (game.currentPlayerType == PlayerType.Human) {
         camOffset = cameraOffsets(game.currentPlayer)
       } else {
@@ -245,8 +221,8 @@ class GameScreen(callback: (GameResult.Value) => Unit) extends BaseScreen {
 
   def isGameOver(): Unit = {
     game.isOver match {
-      case Some(victor) if (victor == GameScreen.LocalPlayer) => showOverlay("Victory!", "You have defeated the enemy", () => onResult(GameResult.Victory))
-      case Some(victor) => showOverlay("Defeat!", "You have been defeated", () => onResult(GameResult.Defeat))
+      case Some(victor) if (victor == GameScreen.LocalPlayer) => showOverlay("Victory!", "You have defeated the enemy", onResult(GameResult.Victory))
+      case Some(victor) => showOverlay("Defeat!", "You have been defeated", onResult(GameResult.Defeat))
       case _ =>
     }
   }
@@ -265,7 +241,7 @@ class GameScreen(callback: (GameResult.Value) => Unit) extends BaseScreen {
     }
   }
 
-  def onResize(): Unit = {
+  override def onResize(): Unit = {
     centerPosition = Coordinate((width.get.toInt - game.map.width * Tile.Size) / 2, (height.get.toInt - game.map.height * Tile.Size) / 2)
     clipCameraToBounds()
     translateScene()
@@ -275,7 +251,7 @@ class GameScreen(callback: (GameResult.Value) => Unit) extends BaseScreen {
 
   def onResult(result: GameResult.Value): Unit = {
     gameLoop.stop()
-    callback(result)
+    callback(result, game.playerList(game.currentPlayer).characters)
   }
 
   def translateScene(): Unit = {
@@ -435,14 +411,14 @@ class GameScreen(callback: (GameResult.Value) => Unit) extends BaseScreen {
     })
   }
 
-  def showOverlay(title: String, action: () => Unit): Unit = {
+  def showOverlay(title: String, action: => Unit): Unit = {
     showOverlay(title, "", action)
   }
 
-  def showOverlay(title: String, subtitle: String, action: () => Unit): Unit = {
+  def showOverlay(title: String, subtitle: String, action: => Unit): Unit = {
     game.isPaused = true
-    overlay.show(title, subtitle, () => {
-      action()
+    overlay.show(title, subtitle, {
+      action
       game.isPaused = false
       overlay.dismiss()
     })

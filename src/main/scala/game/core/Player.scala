@@ -9,12 +9,36 @@ object PlayerType {
   case object Computer extends PlayerType
 }
 
-abstract class Player(val name: String, val playerType: PlayerType) {
-  val characters = ArrayBuffer[Character]()
+abstract class Player(val playerType: PlayerType, val characters: ArrayBuffer[Character]) {
+
+  def this(playerType: PlayerType) {
+    this(playerType, ArrayBuffer())
+  }
 
   def isAlive: Boolean = !characters.isEmpty
+
+  def copy: Player
+
 }
 
-class HumanPlayer(name: String) extends Player(name, PlayerType.Human)
+class HumanPlayer(characters: ArrayBuffer[Character]) extends Player(PlayerType.Human, characters) {
+  def this() {
+    this(ArrayBuffer())
+  }
 
-class AIPlayer(name: String, val ai: PlayerAI) extends Player(name, PlayerType.Computer)
+  def copy: Player = new HumanPlayer(characters.map(_.copy))
+}
+
+class AIPlayer(characters: ArrayBuffer[Character], val ai: PlayerAI) extends Player(PlayerType.Computer, characters) {
+
+  def this(ai: PlayerAI) {
+    this(ArrayBuffer(), ai)
+  }
+
+  def this(characters: ArrayBuffer[Character]) {
+    this(characters, new BasicAI)
+  }
+
+  def copy: Player = new AIPlayer(characters.map(_.copy))
+}
+

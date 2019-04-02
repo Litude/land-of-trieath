@@ -10,8 +10,13 @@ object MovementResult extends Enumeration {
   val Failed, Moving, Attacking = Value
 }
 
-class Game(val playerList: Seq[Player], val onDamageCaused: (Int, Coordinate) => Unit, val onTurnEnded: () => Unit) {
-  val map = MapGenerator.generateMap(Map.TestMapSize, Map.TestMapSize, playerList.length)
+class Game(
+    val playerList: Seq[Player],
+    val map: Map,
+    var onDamageCaused: (Int, Coordinate) => Unit = (Int, Coordinate) => Unit,
+    var onTurnEnded: () => Unit = () => Unit
+  ) {
+  //val map = MapGenerator.generateMap(Map.TestMapSize, Map.TestMapSize, playerList.length)
   val pathFinder: PathFinder = DjikstraFinder
   val walkableTileFinder: WalkableTileFinder = DjikstraFinder
   var characterIsMoving = false
@@ -21,6 +26,7 @@ class Game(val playerList: Seq[Player], val onDamageCaused: (Int, Coordinate) =>
 
   val pendingPathRequests = new AtomicInteger(0)
 
+  //place player characters to spawns
   playerList.zip(map.spawns).foreach({case (player, spawnList) => {
     player.characters.zip(spawnList).foreach({case (character, spawn) => {
       character.position = spawn.position
@@ -88,8 +94,8 @@ class Game(val playerList: Seq[Player], val onDamageCaused: (Int, Coordinate) =>
     if (!isPaused) {
       val movingCharacters = playerList.flatMap(_.characters).filter(_.isMoving)
       movingCharacters.foreach(updateMovingCharacter)
-      removeDeadCharacters()
       updateProjectiles()
+      removeDeadCharacters()
       characterIsMoving = !movingCharacters.isEmpty
       updateAIPlayer()
     }
