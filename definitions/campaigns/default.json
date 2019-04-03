@@ -16,6 +16,20 @@
     ],
     "missions": [
         {
+            "type": "scenario",
+            "filename": "test1.lvl",
+            "enemies": [
+                [
+                    {
+                        "class": "Monk"
+                    },
+                    {
+                        "class": "Monk"
+                    }
+                ]
+            ]
+        },
+        {
             "type": "random",
             "width": 20,
             "height": 20,

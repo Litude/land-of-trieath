@@ -104,7 +104,19 @@
   <parameter name="methodParamIndentSize">2</parameter>
   <parameter name="classParamIndentSize">4</parameter>
  </parameters>
-</check>
+ </check>
+ <check level="warning" class="org.scalastyle.scalariform.ImportOrderChecker" enabled="true">
+<parameters>
+  <parameter name="groups">java,scala,javafx,scalafx,play,game,others</parameter>
+  <parameter name="group.java">javax?\..+</parameter>
+  <parameter name="group.javafx">javafx\..+</parameter>
+  <parameter name="group.scala">scala\..+</parameter>
+  <parameter name="group.scalafx">scalafx\..+</parameter>
+  <parameter name="group.play">play\..+</parameter>
+  <parameter name="group.game">game\..+</parameter>
+  <parameter name="group.others">.+</parameter>
+</parameters>
+ </check>
  <check level="warning" class="org.scalastyle.file.NewLineAtEofChecker" enabled="true"></check>
  <check level="warning" class="org.scalastyle.file.NoNewLineAtEofChecker" enabled="false"></check>
 </scalastyle>

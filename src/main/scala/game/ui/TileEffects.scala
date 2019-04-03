@@ -1,6 +1,7 @@
 package game.ui
 
 import scala.collection.mutable.ArrayBuffer
+
 import scalafx.scene.canvas._
 
 class TileEffects {

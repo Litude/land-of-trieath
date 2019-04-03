@@ -1,9 +1,10 @@
 package game.core
 
 import java.util.concurrent.atomic.AtomicBoolean
-import scala.concurrent.Future
+
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.{Success, Failure}
+import scala.concurrent.Future
+import scala.util.{Failure, Success}
 
 class BasicAI extends PlayerAI {
 

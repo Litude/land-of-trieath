@@ -2,9 +2,9 @@ package game.core
 
 import scala.io.Source
 
+import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.libs.json.Reads._
-import play.api.libs.functional.syntax._
 
 case class CharacterClass(
     val name: String,
@@ -26,7 +26,7 @@ object CharacterClass {
   val DefaultRange = 1
   val DefaultMeleePenalty = 1.0
 
-  implicit val classFromJson: Reads[CharacterClass] = (
+  implicit val fromJson: Reads[CharacterClass] = (
     (JsPath \ "name").read[String] and
     (JsPath \ "attackPower").read[Int] and
     (JsPath \ "defensePower").read[Int] and

@@ -17,10 +17,12 @@ sealed trait Direction {
   final def orientationTo(that: Direction): Orientation = orientationMap.map(_.swap).getOrElse(that, Orientation.Equal)
   val isVertical: Boolean
   final def isHorizontal: Boolean = !isVertical
+  final def toByte: Byte = id.toByte
 }
 object Direction {
   val NumDirections = 4
   val Values: Seq[Direction] = Seq(North, East, South, West)
+  def fromByte(byte: Byte): Direction = Values(byte)
 
   case object North extends Direction {
     val id = 0

@@ -3,9 +3,9 @@ package game.core
 import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
 
+import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.libs.json.Reads._
-import play.api.libs.functional.syntax._
 
 object GameMaster {
   private var campaign: Option[Campaign] = None
@@ -18,17 +18,18 @@ object GameMaster {
   def readCampaignFromFile(filename: String): Unit = {
     val fileContent = Source.fromFile(f"definitions/campaigns/${filename}").getLines.mkString
     val json = Json.parse(fileContent)
-    val result = json.validate[Campaign]
-    campaign = Some(result.get)
+    campaign = json.validate[Campaign] match {
+      case JsSuccess(result, _) => Some(result)
+      case _ => None
+    }
     currentMission = 0
   }
 
   def createGame(): Option[Game] = {
     campaign.flatMap(currentCampaign => currentCampaign.missions.lift(currentMission) match {
-      case Some(random : RandomMission) => {
-        val playerList = createPlayerList(currentCampaign.player, random.enemies)
-        val map = MapGenerator.generateMap(random.width, random.height, playerList.length)
-        Some(new Game(playerList, map))
+      case Some(mission) => {
+        val playerList = createPlayerList(currentCampaign.player, mission.enemies)
+        mission.createMap.map(new Game(playerList, _))
       }
       case _ => None
     })

@@ -1,12 +1,12 @@
 package game.ui
 
 import scalafx.Includes._
-import scalafx.scene.layout.VBox
-import scalafx.scene.layout.HBox
-import scalafx.scene.paint.Color._
-import scalafx.scene.control.Button
-import scalafx.scene.text._
 import scalafx.geometry.Pos
+import scalafx.scene.control.Button
+import scalafx.scene.layout.HBox
+import scalafx.scene.layout.VBox
+import scalafx.scene.paint.Color._
+import scalafx.scene.text._
 
 import game.core.GameMaster
 

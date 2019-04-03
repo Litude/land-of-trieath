@@ -1,14 +1,14 @@
 package game.ui
 
+import javafx.geometry.Bounds
+
+import scalafx.beans.property.ReadOnlyObjectProperty
+import scalafx.scene._
 import scalafx.scene.canvas.GraphicsContext
 import scalafx.scene.image._
 import scalafx.scene.paint.Color
 import scalafx.scene.paint.Color._
-import scalafx.scene.SnapshotParameters
 import scalafx.scene.text.Text
-import scalafx.beans.property.ReadOnlyObjectProperty
-
-import javafx.geometry.Bounds
 
 object UIUtils {
   def getContextStringBounds(context: GraphicsContext, text: String): Bounds = {

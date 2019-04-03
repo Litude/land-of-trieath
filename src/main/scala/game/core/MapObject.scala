@@ -2,9 +2,9 @@ package game.core
 
 import scala.io.Source
 
+import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.libs.json.Reads._
-import play.api.libs.functional.syntax._
 
 case class MapObject(name: String, tiles: List[List[Option[Int]]], randomDisallowed: Boolean) {
   def width: Int = tiles.length
@@ -16,7 +16,7 @@ object MapObject {
     override def reads(json: JsValue): JsResult[Option[Int]] = json.validateOpt[Int]
   }
 
-  implicit val objectFromJson: Reads[MapObject] = (
+  implicit val fromJson: Reads[MapObject] = (
     (JsPath \ "name").read[String] and
     (JsPath \ "tiles").read[List[List[Option[Int]]]] and
     (JsPath \ "randomDisallowed").read[Boolean].orElse(Reads.pure(false))

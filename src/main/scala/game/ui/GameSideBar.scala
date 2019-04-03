@@ -3,22 +3,22 @@ package game.ui
 import scalafx.Includes._
 import scalafx.beans.property._
 import scalafx.geometry._
+import scalafx.scene.control.Alert
+import scalafx.scene.control.Alert._
 import scalafx.scene.control.Button
 import scalafx.scene.control.ButtonType
+import scalafx.scene.control.ProgressBar
 import scalafx.scene.image._
 import scalafx.scene.layout._
 import scalafx.scene.paint.Color
 import scalafx.scene.paint.Color._
 import scalafx.scene.shape.Rectangle
 import scalafx.scene.text._
-import scalafx.scene.control.ProgressBar
-import scalafx.scene.control.Alert
-import scalafx.scene.control.Alert._
 
 import game.core.Character
-import game.core.PlayerType
-import game.core.Game
 import game.core.Direction
+import game.core.Game
+import game.core.PlayerType
 
 class GameSideBar(
     width: Int, stop: => Unit, next: => Unit, skip: => Unit, endTurn: => Unit, quit: => Unit

@@ -135,6 +135,7 @@ class GameScreen(game: Game, callback: (GameResult.Value, ArrayBuffer[Character]
       case KeyCode.S => stopCharacterMovement()
       case KeyCode.D => showDebugInfo = !showDebugInfo
       case KeyCode.Tab => selectNextPlayerCharacter()
+      case KeyCode.T => game.map.writeToFile("maps/temp.lvl")
       case _ =>
     }
   }

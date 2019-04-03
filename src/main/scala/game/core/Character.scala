@@ -3,9 +3,9 @@ package game.core
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
 
+import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.libs.json.Reads._
-import play.api.libs.functional.syntax._
 
 class Character(charType: String) {
 
@@ -166,7 +166,7 @@ object Character {
 
   def apply(characterClass: String): Character = new Character(characterClass)
 
-  implicit val objectFromJson: Reads[Character] =
+  implicit val fromJson: Reads[Character] =
     (JsPath \ "class").read[String].map(Character(_))
 
   val AttackRandomFraction = 10.0
