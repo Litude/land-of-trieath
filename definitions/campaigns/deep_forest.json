@@ -1,6 +1,12 @@
 {
-    "name": "Test Campaign",
+    "name": "Deep Forest",
     "playerCharacters": [
+        {
+            "class": "Warrior"
+        },
+        {
+            "class": "Warrior"
+        },
         {
             "class": "Warrior"
         },
@@ -8,7 +14,7 @@
             "class": "Monk"
         },
         {
-            "class": "Ranger"
+            "class": "Monk"
         },
         {
             "class": "Monk"
@@ -16,30 +22,23 @@
     ],
     "missions": [
         {
-            "type": "scenario",
-            "filename": "test1.lvl",
-            "enemies": [
-                [
-                    {
-                        "class": "Monk"
-                    },
-                    {
-                        "class": "Monk"
-                    }
-                ]
-            ]
-        },
-        {
             "type": "random",
-            "width": 20,
-            "height": 20,
+            "width": 40,
+            "height": 40,
+            "sparseness": 3,
             "enemies": [
                 [
                     {
                         "class": "Warrior"
                     },
                     {
-                        "class": "Warrior"
+                        "class": "Ranger"
+                    },
+                    {
+                        "class": "Mage"
+                    },
+                    {
+                        "class": "Ranger"
                     },
                     {
                         "class": "Mage"
@@ -49,10 +48,38 @@
         },
         {
             "type": "random",
-            "width": 30,
-            "height": 30,
+            "width": 50,
+            "height": 50,
+            "sparseness": 1,
+            "corridors": 2,
             "enemies": [
                 [
+                    {
+                        "class": "Ninja"
+                    },
+                    {
+                        "class": "Ninja"
+                    },
+                    {
+                        "class": "Mage"
+                    },
+                    {
+                        "class": "Warrior"
+                    }
+                ]
+            ]
+        },
+        {
+            "type": "random",
+            "width": 60,
+            "height": 60,
+            "sparseness": 1,
+            "corridors": 2,
+            "enemies": [
+                [
+                    {
+                        "class": "Ranger"
+                    },
                     {
                         "class": "Ranger"
                     },
@@ -60,7 +87,7 @@
                         "class": "Warrior"
                     },
                     {
-                        "class": "Mage"
+                        "class": "Warrior"
                     },
                     {
                         "class": "Ninja"

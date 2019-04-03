@@ -6,25 +6,26 @@ import scala.util.Random
 
 object MapGenerator {
   val MapObjects = MapObject.mapGeneratorObjects
-  val ObjectPlacementRatio = 4
+  val DefaultSparseness = 4
+  val DefaultCorridors = 1
   val SpawnWidth = 12
   val SpawnHeight = 6
 
-  def generateMap(width: Int, height: Int, numPlayers: Int): Map = {
+  def generateMap(width: Int, height: Int, numPlayers: Int, objectSparseness: Int = DefaultSparseness, numCorridors: Int = DefaultCorridors): Map = {
     val map = new Map(width, height)
     val playerPositions = generatePlayerPositions(numPlayers)
     map.spawns = generateCharacterSpawns(playerPositions, width, height)
-    val corridors = generateCorridors(playerPositions, width, height)
+    val corridors = generateCorridors(playerPositions, width, height, numCorridors)
     map.corridors = corridors
-    placeMapObjects(map, corridors)
+    placeMapObjects(map, corridors, objectSparseness)
     map
   }
 
-  private def placeMapObjects(map: Map, corridors: Seq[Coordinate]): Unit = {
+  private def placeMapObjects(map: Map, corridors: Seq[Coordinate], objectSparseness: Int): Unit = {
     for {
       y <- 0 until map.height
       x <- 0 until map.width
-      if (Random.nextInt(ObjectPlacementRatio) == 0 && !map(x, y).isSolid && !isNextToSpawn(map, x, y))
+      if (Random.nextInt(objectSparseness) == 0 && !map(x, y).isSolid && !isNextToSpawn(map, x, y))
     } {
       val mapObject = MapObjects(Random.nextInt(MapObjects.length))
       if (isAreaFreeForObjectPlacement(map, x, y, mapObject, corridors)) {
@@ -85,10 +86,11 @@ object MapGenerator {
     })
   }
 
-  private def generateCorridors(playerPositions: Seq[Direction], width: Int, height: Int): Seq[Coordinate] = {
+  private def generateCorridors(playerPositions: Seq[Direction], width: Int, height: Int, numCorridors: Int): Seq[Coordinate] = {
     (for {
       i <- 0 until playerPositions.length - 1
       j <- 1 + i until playerPositions.length
+      k <- 0 until numCorridors
     } yield (playerPositions(i).orientationTo(playerPositions(j)) match {
       case Orientation.Opposite => corridorAcross(playerPositions(i), width, height)
       case _ => Seq()

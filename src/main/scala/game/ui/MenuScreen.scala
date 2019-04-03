@@ -30,7 +30,7 @@ class MenuScreen(callback: (MenuResult.Value) => Unit) extends BaseScreen {
   title.font = titleFont
   title.fill = White
 
-  val newGame = new Button("New Game")
+  val newGame = new Button("Campaign")
   newGame.font = buttonFont
   newGame.maxWidth = MenuScreen.ButtonWidth
   newGame.onAction = () => callback(MenuResult.NewGame)

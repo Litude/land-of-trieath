@@ -57,6 +57,7 @@ class Map(val width: Int, val height: Int, val tiles: Array[Array[Tile]]) {
 }
 
 object Map {
+  val Directory = "map"
   val HeaderMagic = "LTRIEATH10"
 
   def readFromFile(filename: String): Option[Map] = {
