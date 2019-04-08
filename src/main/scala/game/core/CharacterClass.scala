@@ -46,7 +46,9 @@ object CharacterClass {
   private def readFromFile(filename: String): Seq[CharacterClass] = {
     val fileContent = Source.fromFile(filename).getLines.mkString
     val json = Json.parse(fileContent)
-    val parsedClasses = json.validate[Seq[CharacterClass]]
-    parsedClasses.get
+    json.validate[Seq[CharacterClass]] match {
+      case JsSuccess(result, _) => result
+      case _ => Seq()
+    }
   }
 }

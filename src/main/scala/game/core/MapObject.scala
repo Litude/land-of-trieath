@@ -29,7 +29,9 @@ object MapObject {
   private def readFromFile(filename: String): Seq[MapObject] = {
     val fileContent = Source.fromFile(filename).getLines.mkString
     val json = Json.parse(fileContent)
-    val parsedObjects = json.validate[Seq[MapObject]]
-    parsedObjects.get
+    json.validate[Seq[MapObject]] match {
+      case JsSuccess(result, _) => result
+      case _ => Seq()
+    }
   }
 }

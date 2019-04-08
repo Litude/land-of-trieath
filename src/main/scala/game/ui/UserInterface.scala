@@ -35,8 +35,8 @@ object UserInterface extends JFXApp {
     activeStage = newStage
   }
 
+  // change screen when moving between menu screens
   def changeScreen(screen: BaseScreen): Unit = {
-    // change screen when moving between menu screens
     changeScreen(activeStage, screen)
   }
 
