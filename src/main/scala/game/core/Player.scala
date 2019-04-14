@@ -9,8 +9,7 @@ object PlayerType {
   case object Computer extends PlayerType
 }
 
-abstract class Player(val playerType: PlayerType, characterList: ArrayBuffer[Character]) {
-  val characters = characterList.take(Player.MaxCharacters)
+abstract class Player(val playerType: PlayerType, val characters: ArrayBuffer[Character]) {
 
   def this(playerType: PlayerType) {
     this(playerType, ArrayBuffer())
