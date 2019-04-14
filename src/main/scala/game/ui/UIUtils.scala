@@ -24,9 +24,7 @@ object UIUtils {
     imageView.rotate = degrees
     val snapshotParams = new SnapshotParameters
     snapshotParams.fill = Transparent
-    // scalastyle:off null
-    imageView.snapshot(snapshotParams, null)
-    // scalastyle:on null
+    imageView.snapshot(snapshotParams, None.orNull)
   }
 
   def colorToWebString(color: Color): String = {

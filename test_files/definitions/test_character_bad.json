@@ -1,0 +1,11 @@
+[
+    {
+        "godlyTitle": "God of Thunder",
+        "strength": 23,
+        "defensePower": 10,
+        "movementPoints": 12,
+        "hitpoints": 80,
+        "image": "warrior.png"
+    }
+
+]

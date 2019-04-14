@@ -17,7 +17,7 @@ object MapGenerator {
     map.spawns = generateCharacterSpawns(playerPositions, width, height)
     val corridors = generateCorridors(playerPositions, width, height, numCorridors)
     map.corridors = corridors
-    placeMapObjects(map, corridors, objectSparseness)
+    if (!MapObjects.isEmpty) placeMapObjects(map, corridors, objectSparseness)
     map
   }
 
@@ -25,7 +25,7 @@ object MapGenerator {
     for {
       y <- 0 until map.height
       x <- 0 until map.width
-      if (Random.nextInt(objectSparseness) == 0 && !map(x, y).isSolid && !isNextToSpawn(map, x, y))
+      if (Random.nextInt(objectSparseness) == 0 && !isNextToSpawn(map, x, y))
     } {
       val mapObject = MapObjects(Random.nextInt(MapObjects.length))
       if (isAreaFreeForObjectPlacement(map, x, y, mapObject, corridors)) {
@@ -88,12 +88,21 @@ object MapGenerator {
 
   private def generateCorridors(playerPositions: Seq[Direction], width: Int, height: Int, numCorridors: Int): Seq[Coordinate] = {
     (for {
-      i <- 0 until playerPositions.length - 1
-      j <- 1 + i until playerPositions.length
+      i <- 0 until playerPositions.length
+      j <- 0 until playerPositions.length
       k <- 0 until numCorridors
     } yield (playerPositions(i).orientationTo(playerPositions(j)) match {
-      case Orientation.Opposite => corridorAcross(playerPositions(i), width, height)
-      case _ => Seq()
+      //Opposite orientations get one k number of corridors between each player
+      case Orientation.Opposite => {
+        if (j > i && i < playerPositions.length - 1) {
+          corridorAcross(playerPositions(i), width, height)
+        } else {
+          Seq()
+        }
+      }
+      case Orientation.Equal => Seq()
+      //Clockwise or counterclockwise orientations get k number of corridors in both directions
+      case _ => corridorAcross(playerPositions(i), width, height)
     })).flatten
   }
 
@@ -112,6 +121,32 @@ object MapGenerator {
       case Direction.South => position.y == SpawnHeight - 1
       case Direction.East => position.x == SpawnHeight - 1
       case Direction.West => position.x == width - SpawnHeight
+    }
+  }
+
+  private def atCorridorCarverTerminalPosition(direction: Direction, position: Coordinate, width: Int, height: Int): Boolean = {
+    direction match {
+      case Direction.North | Direction.South => {
+        val minX = width / 2 - SpawnWidth / 2
+        val maxX = minX + SpawnWidth
+        position.x >= minX && position.x <= maxX && atCorridorCarverEndPosition(direction, position, width, height)
+      }
+      case Direction.East | Direction.West => {
+        val minY = height / 2 - SpawnHeight / 2
+        val maxY = minY + SpawnHeight
+        position.y >= minY && position.y <= maxY && atCorridorCarverEndPosition(direction, position, width, height)
+      }
+    }
+  }
+
+  private def directionToTerminalPosition(direction: Direction, position: Coordinate, width: Int, height: Int): Direction = {
+    direction match {
+      case Direction.North | Direction.South => {
+        if (position.x > width / 2) Direction.West else Direction.East
+      }
+      case Direction.East | Direction.West => {
+        if (position.y > height / 2) Direction.North else Direction.South
+      }
     }
   }
 
@@ -160,18 +195,20 @@ object MapGenerator {
     var next = start + currentDirection
     do {
       coordinates += next
-      val probability = corridorForwardProbability(direction, width, height, next, middle)
-      if (currentDirection != initialDirection) {
-        if (Random.nextDouble < probability) {
-          currentDirection = initialDirection
+      if (!atCorridorCarverEndPosition(direction, next, width, height)) {
+        val probability = corridorForwardProbability(direction, width, height, next, middle)
+        if (currentDirection != initialDirection) {
+          if (Random.nextDouble < probability) {
+            currentDirection = initialDirection
+          }
+        } else if (Random.nextDouble < 1.0 - probability) {
+          currentDirection = corridorRotationDirection(direction, currentDirection, next, middle)
         }
-      } else if (Random.nextDouble < 1.0 - probability) {
-        currentDirection = corridorRotationDirection(direction, currentDirection, next, middle)
+        next += currentDirection
+      } else {
+        next += directionToTerminalPosition(direction, next, width, height)
       }
-
-      next += currentDirection
-      //TODO: Still need to ensure the end point is inside the other player spawn!
-    } while (!atCorridorCarverEndPosition(direction, next, width, height))
+    } while (!atCorridorCarverTerminalPosition(direction, next, width, height))
     coordinates += next
     coordinates
   }

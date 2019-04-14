@@ -1,0 +1,36 @@
+[
+    {
+        "name": "Warrior",
+        "attackPower": 23,
+        "defensePower": 10,
+        "movementPoints": 12,
+        "hitpoints": 80,
+        "image": "warrior.png"
+    },
+    {
+        "name": "Monk",
+        "attackPower": 26,
+        "defensePower": 6,
+        "movementPoints": 14,
+        "hitpoints": 92,
+        "image": "monk.png",
+        "attackBonus": {
+            "Ranger": 1.2
+        }
+    },
+    {
+        "name": "Ranger",
+        "attackPower": 19,
+        "defensePower": 8,
+        "movementPoints": 10,
+        "hitpoints": 60,
+        "image": "ranger.png",
+        "range": 10,
+        "meleePenalty": 0.5,
+        "projectile": "arrow.png",
+        "attackBonus": {
+            "Warrior": 1.25
+        }
+    }
+
+]

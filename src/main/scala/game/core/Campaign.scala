@@ -34,6 +34,8 @@ abstract class Mission(val missionType: MissionType.Value, val enemies: Seq[Play
   def createMap: Option[Map]
 }
 object Mission {
+  val MaxEnemies = 3
+
   implicit val fromJson: Reads[Mission] = new Reads[Mission] {
     override def reads(json: JsValue): JsResult[Mission] = {
       (json \ "type").as[String] match {
@@ -57,7 +59,7 @@ object RandomMission {
     (JsPath \ "height").read[Int] and
     (JsPath \ "sparseness").read[Int].orElse(Reads.pure(MapGenerator.DefaultSparseness)) and
     (JsPath \ "corridors").read[Int].orElse(Reads.pure(MapGenerator.DefaultCorridors)) and
-    (JsPath \ "enemies").read[Seq[ArrayBuffer[Character]]].map(_.map(new AIPlayer(_)))
+    (JsPath \ "enemies").read[Seq[ArrayBuffer[Character]]].map(_.take(Mission.MaxEnemies)).map(_.map(new AIPlayer(_)))
     )(RandomMission.apply _)
 }
 
@@ -68,6 +70,6 @@ case class ScenarioMission(val filename: String, enemyList: Seq[Player]) extends
 object ScenarioMission {
   implicit val fromJson: Reads[ScenarioMission] = (
     (JsPath \ "filename").read[String] and
-    (JsPath \ "enemies").read[Seq[ArrayBuffer[Character]]].map(_.map(new AIPlayer(_)))
+    (JsPath \ "enemies").read[Seq[ArrayBuffer[Character]]].map(_.take(Mission.MaxEnemies)).map(_.map(new AIPlayer(_)))
     )(ScenarioMission.apply _)
 }

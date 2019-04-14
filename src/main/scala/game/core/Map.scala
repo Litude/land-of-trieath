@@ -4,7 +4,9 @@ import java.io._
 
 import scala.util.{Failure, Success, Try}
 
-class Map(val width: Int, val height: Int, val tiles: Array[Array[Tile]]) {
+class Map(givenWidth: Int, givenHeight: Int, val tiles: Array[Array[Tile]]) {
+  val width = Math.max(Map.MinWidth, givenWidth)
+  val height = Math.max(Map.MinHeight, givenHeight)
 
   def this(mapWidth: Int, mapHeight: Int) {
     this(mapWidth, mapHeight, Array.tabulate[Tile](mapWidth, mapHeight)((x, y) => new Tile(x % 4, None)))
@@ -59,6 +61,8 @@ class Map(val width: Int, val height: Int, val tiles: Array[Array[Tile]]) {
 object Map {
   val Directory = "map"
   val HeaderMagic = "LTRIEATH10"
+  val MinWidth = 20
+  val MinHeight = 20
 
   def readFromFile(filename: String): Option[Map] = {
     Try(new FileInputStream(filename)).map(new BufferedInputStream(_)) match {

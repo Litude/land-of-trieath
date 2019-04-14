@@ -1,6 +1,7 @@
 package game.core
 
 import scala.io.Source
+import scala.util.{Failure, Success, Try}
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -43,11 +44,9 @@ object CharacterClass {
 
   def get(name: String): CharacterClass = Values.find(_.name == name).get
 
-  private def readFromFile(filename: String): Seq[CharacterClass] = {
-    val fileContent = Source.fromFile(filename).getLines.mkString
-    val json = Json.parse(fileContent)
-    json.validate[Seq[CharacterClass]] match {
-      case JsSuccess(result, _) => result
+  def readFromFile(filename: String): Seq[CharacterClass] = {
+    Try(Source.fromFile(filename).getLines.mkString).map(Json.parse(_).validate[Seq[CharacterClass]]) match {
+      case Success(JsSuccess(result, _)) => result
       case _ => Seq()
     }
   }

@@ -7,9 +7,12 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.libs.json.Reads._
 
-class Character(charType: String) {
+class Character(val characterClass: CharacterClass) {
 
-  val characterClass = CharacterClass.get(charType)
+  def this(charType: String) {
+    this(CharacterClass.get(charType))
+  }
+
   var direction: Direction = Direction.North
 
   var hitpoints = maxHitPoints
@@ -24,7 +27,7 @@ class Character(charType: String) {
   private var _walkingPath: Option[ArrayBuffer[Coordinate]] = None
 
   //This is a "VERY" lazy copy, since at least for now all other fields can be set to their defaults when copying
-  def copy: Character = new Character(this.characterClass.name)
+  def copy: Character = new Character(this.characterClass)
 
   def maxHitPoints: Int = characterClass.hitpoints
   def maxMovementPoints: Int = characterClass.movementPoints
@@ -165,6 +168,7 @@ class Character(charType: String) {
 object Character {
 
   def apply(characterClass: String): Character = new Character(characterClass)
+  def apply(characterClass: CharacterClass): Character = new Character(characterClass)
 
   implicit val fromJson: Reads[Character] =
     (JsPath \ "class").read[String].map(Character(_))

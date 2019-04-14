@@ -12,6 +12,12 @@
             "problemMatcher": []
         },
         {
+            "label": "Test",
+            "type": "shell",
+            "command": "sbt test",
+            "problemMatcher": []
+        },
+        {
             "label": "Build (Background)",
             "options": {
 				"shell": {

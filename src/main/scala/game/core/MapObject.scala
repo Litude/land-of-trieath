@@ -1,6 +1,7 @@
 package game.core
 
 import scala.io.Source
+import scala.util.{Failure, Success, Try}
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -26,12 +27,11 @@ object MapObject {
 
   def mapGeneratorObjects: Seq[MapObject] = Values.filter(!_.randomDisallowed)
 
-  private def readFromFile(filename: String): Seq[MapObject] = {
-    val fileContent = Source.fromFile(filename).getLines.mkString
-    val json = Json.parse(fileContent)
-    json.validate[Seq[MapObject]] match {
-      case JsSuccess(result, _) => result
+  def readFromFile(filename: String): Seq[MapObject] = {
+    Try(Source.fromFile(filename).getLines.mkString).map(Json.parse(_).validate[Seq[MapObject]]) match {
+      case Success(JsSuccess(result, _)) => result
       case _ => Seq()
     }
   }
+
 }

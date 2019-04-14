@@ -1,0 +1,11 @@
+[
+    {
+        "name": "Stump",
+        "tiles": [[0]]
+    },
+    {
+        "name": "Rock",
+        "tiles": [[2]],
+        "randomDisallowed": true
+    }
+]

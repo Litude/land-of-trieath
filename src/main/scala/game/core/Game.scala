@@ -17,7 +17,6 @@ class Game(
     var onDamageCaused: (Int, Coordinate) => Unit = (Int, Coordinate) => Unit,
     var onTurnEnded: () => Unit = () => Unit
   ) {
-  //val map = MapGenerator.generateMap(Map.TestMapSize, Map.TestMapSize, playerList.length)
   val pathFinder: PathFinder = DjikstraFinder
   val walkableTileFinder: WalkableTileFinder = DjikstraFinder
   var characterIsMoving = false
