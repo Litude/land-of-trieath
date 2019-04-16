@@ -21,6 +21,7 @@ class BasicAI extends PlayerAI {
       if (!targets.isEmpty) {
         calculating.set(true)
         Future {
+          // priority here is an inverted priority, i.e. a target with a lower value is more likely to be attacked
           var priorities = game.distancesToTargets(nextToMove.position, targets.map(_.position), characters).zipWithIndex.filter(_._1 != Int.MaxValue)
           priorities = priorities.map({ case (distance: Int, i: Int) => {
             // equalize all targets that we can reach this round

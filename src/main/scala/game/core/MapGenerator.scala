@@ -73,6 +73,7 @@ object MapGenerator {
 
   private def generateCharacterSpawns(playerPositions: Seq[Direction], width: Int, height: Int): Seq[Seq[CharacterSpawn]] = {
     def alternatingOffset(i: Int, extent: Int): Int = {
+      //generate a position to the opposite side of the middle point each time
       val multiplier = if (i % 2 == 1) 1 else -1
       val offset = i / 2
       (extent / 2) + 2 * multiplier * offset
@@ -97,7 +98,7 @@ object MapGenerator {
       j <- 0 until playerPositions.length
       k <- 0 until numCorridors
     } yield (playerPositions(i).orientationTo(playerPositions(j)) match {
-      //Opposite orientations get one k number of corridors between each player
+      //Opposite orientations get k number of corridors between each player
       case Orientation.Opposite => {
         if (j > i && i < playerPositions.length - 1) {
           corridorAcross(playerPositions(i), width, height)
@@ -120,6 +121,7 @@ object MapGenerator {
     }
   }
 
+  //check if we are at a position where we need to start moving towards the terminal position
   private def atCorridorCarverEndPosition(direction: Direction, position: Coordinate, width: Int, height: Int): Boolean = {
     direction match {
       case Direction.North => position.y == height - SpawnHeight
@@ -129,6 +131,7 @@ object MapGenerator {
     }
   }
 
+  //check if we have reached the end and can quit carving
   private def atCorridorCarverTerminalPosition(direction: Direction, position: Coordinate, width: Int, height: Int): Boolean = {
     direction match {
       case Direction.North | Direction.South => {
