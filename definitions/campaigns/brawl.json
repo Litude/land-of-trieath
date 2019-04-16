@@ -1,0 +1,129 @@
+{
+    "name": "Brawl n' Bash",
+    "playerCharacters": [
+        {
+            "class": "Warrior"
+        },
+        {
+            "class": "Elf"
+        },
+        {
+            "class": "Ninja"
+        },
+        {
+            "class": "Warrior"
+        },
+        {
+            "class": "Monk"
+        },
+        {
+            "class": "Mage"
+        },
+        {
+            "class": "Ninja"
+        },
+        {
+            "class": "Monk"
+        },
+        {
+            "class": "Mage"
+        },
+        {
+            "class": "Ranger"
+        },
+        {
+            "class": "Ranger"
+        }
+    ],
+    "missions": [
+        {
+            "type": "random",
+            "width": 80,
+            "height": 80,
+            "sparseness": 3,
+            "enemies": [
+                [
+                    {
+                        "class": "Warrior"
+                    },
+                    {
+                        "class": "Ranger"
+                    },
+                    {
+                        "class": "Mage"
+                    },
+                    {
+                        "class": "Ranger"
+                    },
+                    {
+                        "class": "Monk"
+                    },
+                    {
+                        "class": "Warrior"
+                    },
+                    {
+                        "class": "Ranger"
+                    },
+                    {
+                        "class": "Mage"
+                    }
+                ],
+                [
+                    {
+                        "class": "Mage"
+                    },
+                    {
+                        "class": "Elf"
+                    },
+                    {
+                        "class": "Ranger"
+                    },
+                    {
+                        "class": "Ranger"
+                    },
+                    {
+                        "class": "Ranger"
+                    },
+                    {
+                        "class": "Elf"
+                    },
+                    {
+                        "class": "Elf"
+                    },
+                    {
+                        "class": "Elf"
+                    },
+                    {
+                        "class": "Mage"
+                    }
+                ],
+                [
+                    {
+                        "class": "Monk"
+                    },
+                    {
+                        "class": "Warrior"
+                    },
+                    {
+                        "class": "Warrior"
+                    },
+                    {
+                        "class": "Warrior"
+                    },
+                    {
+                        "class": "Monk"
+                    },
+                    {
+                        "class": "Monk"
+                    },
+                    {
+                        "class": "Monk"
+                    },
+                    {
+                        "class": "Warrior"
+                    }
+                ]
+            ]
+        }
+    ]
+}

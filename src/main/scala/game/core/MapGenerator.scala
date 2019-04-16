@@ -10,8 +10,13 @@ object MapGenerator {
   val DefaultCorridors = 1
   val SpawnWidth = 12
   val SpawnHeight = 6
+  val MinWidth = 20
+  val MinHeight = 20
 
-  def generateMap(width: Int, height: Int, numPlayers: Int, objectSparseness: Int = DefaultSparseness, numCorridors: Int = DefaultCorridors): Map = {
+  def generateMap(givenWidth: Int, givenHeight: Int, numPlayers: Int, objectSparseness: Int = DefaultSparseness, numCorridors: Int = DefaultCorridors): Map = {
+    val width = Math.max(givenWidth, MinWidth)
+    val height = Math.max(givenHeight, MinHeight)
+
     val map = new Map(width, height)
     val playerPositions = generatePlayerPositions(numPlayers)
     map.spawns = generateCharacterSpawns(playerPositions, width, height)

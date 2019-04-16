@@ -56,6 +56,16 @@
         "attackBonus": {
             "Monk": 1.25
         }
+    },
+    {
+        "name": "Elf",
+        "attackPower": 13,
+        "defensePower": 12,
+        "movementPoints": 16,
+        "hitpoints": 40,
+        "image": "elf.png",
+        "attackBonus": {
+            "Mage": 0.5
+        }
     }
-
 ]

@@ -4,12 +4,13 @@ import java.io._
 
 import scala.util.{Failure, Success, Try}
 
-class Map(givenWidth: Int, givenHeight: Int, val tiles: Array[Array[Tile]]) {
-  val width = Math.max(Map.MinWidth, givenWidth)
-  val height = Math.max(Map.MinHeight, givenHeight)
+class Map(val tiles: Array[Array[Tile]]) {
+
+  def width: Int = tiles.length
+  def height: Int = tiles(0).length
 
   def this(mapWidth: Int, mapHeight: Int) {
-    this(mapWidth, mapHeight, Array.tabulate[Tile](mapWidth, mapHeight)((x, y) => new Tile(x % 4, None)))
+    this(Array.tabulate[Tile](mapWidth, mapHeight)((x, y) => new Tile(x % 4, None)))
   }
 
   var spawns: Seq[Seq[CharacterSpawn]] = Seq(Seq())
@@ -61,8 +62,6 @@ class Map(givenWidth: Int, givenHeight: Int, val tiles: Array[Array[Tile]]) {
 object Map {
   val Directory = "map"
   val HeaderMagic = "LTRIEATH10"
-  val MinWidth = 20
-  val MinHeight = 20
 
   def readFromFile(filename: String): Option[Map] = {
     Try(new FileInputStream(filename)).map(new BufferedInputStream(_)) match {
@@ -88,7 +87,7 @@ object Map {
                 CharacterSpawn.fromBytes(buffer)
               })
             })
-            val map = new Map(width, height, tiles)
+            val map = new Map(tiles)
             map.spawns = spawns
             Some(map)
           } else {
