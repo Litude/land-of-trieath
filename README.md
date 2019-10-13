@@ -1,6 +1,8 @@
 # Land of Trieath
 
-Turn-based strategy game.
+![screenshot](doc/screenshot.png)
+
+A turn-based strategy game.
 
 ## Compiling
 
